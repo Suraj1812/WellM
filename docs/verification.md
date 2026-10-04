@@ -21,11 +21,13 @@ Keep build-time checks and physical-device evidence separate. Update this file w
 | Full iOS native build              | Pending                         | Requires a compatible Xcode/iOS toolchain and a complete native build                                                             |
 | Browser UI and AOS                 | Passed                          | Start/stop preview, week/day navigation, deletion dialogs, 320–1440 px layouts, nested-scroll reveals and reduced motion verified |
 | Web production export              | Passed                          | `npm run build:web`                                                                                                               |
-| GitHub CI                          | Configured; remote run pending  | Workflow syntax, commands, and action tags validated locally                                                                      |
+| GitHub CI                          | Passed on GitHub                | [Run 37180554109](https://github.com/Suraj1812/WellM/actions/runs/37180554109) passed for `0e1d546`                               |
 
 During implementation, `npm audit` reported 30 advisories in inherited toolchain dependencies. A compatible automatic fix was unavailable. The project retains SDK-compatible dependencies; review upstream maintainer updates instead of forcing an incompatible SDK downgrade.
 
 ## Android preview artifact
+
+Published as [v1.0.0-preview](https://github.com/Suraj1812/WellM/releases/tag/v1.0.0-preview), with the APK, checksum, and three browser screenshots. The release download was verified to return HTTP 200 and the expected byte length.
 
 Built on 4 October 2026. The local artifact is `artifacts/wellm-preview.apk`, 55,249,018 bytes, for `arm64-v8a` Android phones running Android 7 or newer. Package: `com.wellm.nights`, version `1.0.0`, minimum SDK 24, target SDK 36. The release variant is signed with the generated Android Debug certificate for sideloaded preview use; it needs a production signing key before store distribution.
 
