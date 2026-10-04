@@ -1,0 +1,23 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'expo.modules.wellmsnore'
+version = '1.0.0'
+
+android {
+  namespace 'expo.modules.wellmsnore'
+  defaultConfig {
+    versionCode 1
+    versionName '1.0.0'
+  }
+  sourceSets.main.assets.srcDirs += file('../../../assets/models')
+  androidResources { noCompress += ['tflite'] }
+}
+
+dependencies {
+  implementation 'androidx.core:core-ktx:1.17.0'
+  implementation 'com.google.ai.edge.litert:litert:1.4.2'
+  testImplementation 'junit:junit:4.13.2'
+}

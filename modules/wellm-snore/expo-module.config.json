@@ -1,0 +1,8 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["WellMSnoreModule"],
+    "podspecPath": "WellMSnore.podspec"
+  },
+  "android": { "modules": ["expo.modules.wellmsnore.WellMSnoreModule"] }
+}
