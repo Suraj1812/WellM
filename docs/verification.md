@@ -4,7 +4,7 @@ Keep build-time checks and physical-device evidence separate. Update this file w
 
 ## Automated checks
 
-The native build and CI results below describe the published 4 October preview. The current working-tree browser changes are recorded separately below; the Android source fixes require a rebuilt native artifact.
+The first native build and CI results below describe the published 4 October preview. The 5 October browser checks and rebuilt Android preview are recorded in their own sections below.
 
 | Check                              | Status                          | Evidence                                                                                                                          |
 | ---------------------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
@@ -81,6 +81,19 @@ The browser now uses real microphone PCM and the bundled YAMNet model through lo
 - An isolated Chromium test captured a generated microphone audio fixture through the actual AudioWorklet/resampling/YAMNet pipeline. Initial capture was 14.128 seconds, with 13.65 analyzed seconds. Its ten-second WAV contained captured nonzero PCM. This test does not provide phone or real-snoring evidence.
 - The isolated final browser run passed 23 checks, including chart growth anchored to the baseline and immediate rendering with reduced motion. It checked playback, reload persistence, repeated start/stop, reuse of already-loaded WASM, interruption and checkpoint recovery, denied permission, deletion, local Week dates, 320/390-pixel layouts, reduced motion, popup alignment, and inside/outside-click behavior. No JavaScript errors, console errors, or outgoing HTTP writes were observed in the isolated final run.
 - Known startup/runtime issues fixed: ignored microphone permission now times out cleanly; late grants release their tracks; Fast Refresh preserves the engine and reuses loaded/pending LiteRT; stop disconnects queued worklet callbacks; stale provider reads cannot overwrite newer actions; playback cannot interfere with capture startup.
-- Android source now uses cancellable nonblocking microphone reads and verifies retained clip paths. These source changes have not been compiled into the existing published APK or validated on a phone.
+- Android source now uses cancellable nonblocking microphone reads and verifies retained clip paths. These fixes are compiled into the 1.0.1 preview below; physical-phone validation remains pending.
 
 The physical-phone two-minute video and thirty-minute locked-screen run remain pending. Browser capture deliberately stops and marks an interruption when hidden; it does not claim native overnight continuity.
+
+## 5 October 2026 Android preview 1.0.1
+
+Published as [v1.0.1-preview](https://github.com/Suraj1812/WellM/releases/tag/v1.0.1-preview), with the APK, checksum, verification report, source revision, and Android clip-test XML. Built from `d4f111c22b79b264ab4c41c48006991a4a049235` on GitHub; [build run 37306480868](https://github.com/Suraj1812/WellM/actions/runs/37306480868) and [source CI run 37306468639](https://github.com/Suraj1812/WellM/actions/runs/37306468639) passed. This build uses the checked-in Android preview workflow and does not require an Expo account.
+
+- Package `com.wellm.nights`, version `1.0.1`, version code `2`; `arm64-v8a`, minimum SDK 24, target SDK 36.
+- APK size: 54,989,474 bytes. SHA-256: `368caabcf4b964ab3049f75dce83aae81ab998ea354a8670bd705fd5d05a2f31`.
+- TypeScript, lint, formatting, and 29 source tests passed. Native compilation, the full release build, and three Android clip tests passed, with zero failures or errors.
+- Embedded bundle: 2,374,200 bytes. The uncompressed model and its bundled license are present; the YAMNet checksum matches the audited native/browser model.
+- APK signature and 16 KB ZIP alignment passed in CI. The downloaded artifact was independently checked against its checksum, source revision, embedded assets, and signer certificate.
+- The preview signer SHA-256 is `fac61745dc0903786fb9ede62a962b399f7348f0bb6f899b8332667591033b9c`, matching both the original APK and the Expo template certificate. Installing this preview over the original can preserve local recordings.
+
+The physical-phone thirty-minute locked-screen run, two-minute snoring video, and complete iOS build remain pending. A successful APK build does not establish those device results.

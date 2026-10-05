@@ -6,7 +6,7 @@ The app has no account, backend, or audio upload. Android, iOS, and the browser 
 
 ## Preview and download
 
-[Download the Android preview APK](https://github.com/Suraj1812/WellM/releases/tag/v1.0.0-preview) for an arm64 Android phone running Android 7 or newer. This sideloaded preview has an embedded bundle and model; it does not need the development server. Physical-phone recording and background behavior are still awaiting the acceptance run.
+[Download the Android preview APK](https://github.com/Suraj1812/WellM/releases/download/v1.0.1-preview/wellm-preview.apk) for an arm64 Android phone running Android 7 or newer. This sideloaded preview has an embedded bundle and model; it does not need the development server. Physical-phone recording and background behavior are still awaiting the acceptance run.
 
 | Tonight                                                    | Morning                                                    | My week                                              |
 | ---------------------------------------------------------- | ---------------------------------------------------------- | ---------------------------------------------------- |
@@ -85,7 +85,7 @@ npm run model:verify
 
 Read [architecture and tradeoffs](docs/architecture.md) to prepare for explaining the implementation. [The submission draft](docs/submission.md) contains the required five-line score and AI explanations, video outline, and placeholders for your actual Delhi NCR location and notice period.
 
-The supplied WellM logo guides the header wordmark and app icon. A generated bedside photograph supports the Tonight screen. Their origins, generation prompts, and image preparation steps are recorded in [the asset notes](docs/assets.md).
+The supplied WellM logo guides the header wordmark and app icon. Asset origins, generation prompts, and preparation steps are recorded in [the asset notes](docs/assets.md).
 
 ## Model
 
