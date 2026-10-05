@@ -1,5 +1,6 @@
 import React from 'react';
 import Svg, { Path, Circle, Line, Rect, Polyline } from 'react-native-svg';
+import { useTheme } from './ThemeProvider';
 export type IconName =
   | 'moon'
   | 'sun'
@@ -22,7 +23,7 @@ export type IconName =
 export function Icon({
   name,
   size = 20,
-  color = '#3D604B',
+  color,
   stroke = 1.7,
 }: {
   name: IconName;
@@ -30,9 +31,11 @@ export function Icon({
   color?: string;
   stroke?: number;
 }) {
+  const { colors } = useTheme();
+  const iconColor = color ?? colors.green;
   const shared = {
     fill: 'none',
-    stroke: color,
+    stroke: iconColor,
     strokeWidth: stroke,
     strokeLinecap: 'round' as const,
     strokeLinejoin: 'round' as const,
@@ -71,17 +74,17 @@ export function Icon({
         <>
           <Circle cx="12" cy="12" r="9" />
           <Line x1="12" y1="11" x2="12" y2="17" />
-          <Circle cx="12" cy="7" r=".5" fill={color} />
+          <Circle cx="12" cy="7" r=".5" fill={iconColor} />
         </>
       )}
-      {name === 'play' && <Path fill={color} stroke="none" d="m8 4 12 8-12 8V4Z" />}
+      {name === 'play' && <Path fill={iconColor} stroke="none" d="m8 4 12 8-12 8V4Z" />}
       {name === 'pause' && (
         <>
-          <Rect x="6" y="4" width="4" height="16" rx="1" fill={color} />
-          <Rect x="14" y="4" width="4" height="16" rx="1" fill={color} />
+          <Rect x="6" y="4" width="4" height="16" rx="1" fill={iconColor} />
+          <Rect x="14" y="4" width="4" height="16" rx="1" fill={iconColor} />
         </>
       )}
-      {name === 'stop' && <Rect x="6" y="6" width="12" height="12" rx="2" fill={color} />}
+      {name === 'stop' && <Rect x="6" y="6" width="12" height="12" rx="2" fill={iconColor} />}
       {name === 'close' && <Path d="m6 6 12 12M6 18 18 6" />}
       {name === 'trash' && <Path d="M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7m4-7v7" />}
       {name === 'volume' && (

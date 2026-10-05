@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, Platform, View } from 'react-native';
-import { colors } from './theme';
+import { useTheme } from './ThemeProvider';
 
 const MotionPreference = createContext<boolean | null>(null);
 
@@ -85,6 +85,7 @@ export function SignalHalo({
   active: boolean;
   children: React.ReactNode;
 }) {
+  const { colors } = useTheme();
   const reduced = useReducedMotion();
   const [signal] = useState(() => new Animated.Value(0));
   useEffect(() => {

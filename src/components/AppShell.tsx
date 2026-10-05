@@ -14,7 +14,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNights } from '../state/NightProvider';
 import { Icon, type IconName } from './Icon';
 import { Button, useCompact } from './Primitives';
-import { colors, fonts, ui } from './theme';
+import { fonts, type ThemeColors } from './theme';
+import { useTheme, useThemedStyles } from './ThemeProvider';
 import { formatDuration } from '../domain';
 import {
   MotionSettings,
@@ -35,6 +36,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   );
 }
 function AppShellContent({ children }: { children: React.ReactNode }) {
+  const { colors, ui, isDark, toggleTheme } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const compact = useCompact();
   const insets = useSafeAreaInsets();
   const path = usePathname();
@@ -44,6 +47,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
   const { notice, dismissNotice, removeAll, engine, notify } = useNights();
   const [help, setHelp] = useState(false);
   const [clear, setClear] = useState(false);
+  const [themeBusy, setThemeBusy] = useState(false);
   const dialogVisible = help || !!notice || clear;
   const [displayedDialog, setDisplayedDialog] = useState({ notice, clear });
   // Preserve the visible content while the native/browser modal finishes fading out.
@@ -111,13 +115,33 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
           >
             <Image
               source={require('../../assets/brand/wellm-logo.png')}
-              style={{ width: 126, height: 34 }}
+              style={[{ width: 126, height: 34 }, isDark && { tintColor: colors.ink }]}
               resizeMode="contain"
               accessibilityLabel="WellM"
             />
           </Pressable>
           {!compact && navigation}
           <View style={ui.row}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+              accessibilityState={{ disabled: themeBusy, busy: themeBusy }}
+              disabled={themeBusy}
+              onPress={() => {
+                setThemeBusy(true);
+                void toggleTheme()
+                  .catch((error: unknown) => {
+                    notify(
+                      'Could not save theme',
+                      error instanceof Error ? error.message : 'Try again.',
+                    );
+                  })
+                  .finally(() => setThemeBusy(false));
+              }}
+              style={({ pressed }) => [styles.help, pressed && { opacity: 0.65 }]}
+            >
+              <Icon name={isDark ? 'sun' : 'moon'} size={24} color={colors.muted} />
+            </Pressable>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="About WellM and privacy"
@@ -296,6 +320,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
   );
 }
 function AboutPoint({ text }: { text: string }) {
+  const { colors, ui } = useTheme();
   return (
     <View style={[ui.row, { alignItems: 'flex-start', gap: 10, marginTop: 16 }]}>
       <View
@@ -311,66 +336,79 @@ function AboutPoint({ text }: { text: string }) {
     </View>
   );
 }
-const styles = StyleSheet.create({
-  header: {
-    height: 82,
-    flexShrink: 0,
-    borderBottomWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 44,
-  },
-  headerInner: {
-    width: '100%',
-    maxWidth: 1100,
-    alignSelf: 'center',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    height: '100%',
-  },
-  recordingStrip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 24,
-    minHeight: 44,
-    backgroundColor: colors.greenLight,
-    flexShrink: 0,
-  },
-  help: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tabs: { flexDirection: 'row', padding: 5, gap: 3, borderRadius: 15, backgroundColor: '#EDEFE8' },
-  tab: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 19,
-    paddingVertical: 11,
-    alignItems: 'center',
-    borderRadius: 11,
-  },
-  activeTab: { backgroundColor: '#fff', boxShadow: '0px 2px 7px rgba(25,45,25,0.05)' },
-  tabText: { fontFamily: fonts.medium, fontSize: 12, color: colors.muted },
-  mobileTabs: { width: '100%', backgroundColor: 'transparent', justifyContent: 'space-around' },
-  mobileTab: { flex: 1, flexDirection: 'column', gap: 4, paddingHorizontal: 5, paddingVertical: 9 },
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(25,30,25,.4)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  modal: {
-    width: '100%',
-    maxWidth: 460,
-    borderRadius: 24,
-    padding: 25,
-    backgroundColor: colors.background,
-    maxHeight: '95%',
-    overflow: 'hidden',
-  },
-  modalTitle: { fontFamily: fonts.serif, fontSize: 30, color: colors.ink, lineHeight: 36 },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    header: {
+      height: 82,
+      flexShrink: 0,
+      borderBottomWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: 44,
+    },
+    headerInner: {
+      width: '100%',
+      maxWidth: 1100,
+      alignSelf: 'center',
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      height: '100%',
+    },
+    recordingStrip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingHorizontal: 24,
+      minHeight: 44,
+      backgroundColor: colors.greenLight,
+      flexShrink: 0,
+    },
+    help: {
+      width: 44,
+      height: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    tabs: {
+      flexDirection: 'row',
+      padding: 5,
+      gap: 3,
+      borderRadius: 15,
+      backgroundColor: colors.tabsBackground,
+    },
+    tab: {
+      flexDirection: 'row',
+      gap: 8,
+      paddingHorizontal: 19,
+      paddingVertical: 11,
+      alignItems: 'center',
+      borderRadius: 11,
+    },
+    activeTab: { backgroundColor: colors.activeTab, boxShadow: '0px 2px 7px rgba(25,45,25,0.05)' },
+    tabText: { fontFamily: fonts.medium, fontSize: 12, color: colors.muted },
+    mobileTabs: { width: '100%', backgroundColor: 'transparent', justifyContent: 'space-around' },
+    mobileTab: {
+      flex: 1,
+      flexDirection: 'column',
+      gap: 4,
+      paddingHorizontal: 5,
+      paddingVertical: 9,
+    },
+    overlay: {
+      flex: 1,
+      backgroundColor: colors.overlay,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 24,
+    },
+    modal: {
+      width: '100%',
+      maxWidth: 460,
+      borderRadius: 24,
+      padding: 25,
+      backgroundColor: colors.background,
+      maxHeight: '95%',
+      overflow: 'hidden',
+    },
+    modalTitle: { fontFamily: fonts.serif, fontSize: 30, color: colors.ink, lineHeight: 36 },
+  });

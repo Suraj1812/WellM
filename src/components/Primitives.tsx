@@ -8,7 +8,8 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
-import { colors, fonts, ui } from './theme';
+import { fonts, type ThemeColors } from './theme';
+import { useTheme, useThemedStyles } from './ThemeProvider';
 import { Icon, type IconName } from './Icon';
 import { useReducedMotion } from './Motion';
 export function useCompact() {
@@ -31,6 +32,8 @@ export function Button({
   disabled?: boolean;
   accessibilityLabel?: string;
 }) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const reduced = useReducedMotion();
   const [scale] = useState(() => new Animated.Value(1));
   const [hovered, setHovered] = useState(false);
@@ -62,15 +65,15 @@ export function Button({
         style={({ pressed }) => [
           styles.button,
           secondary && styles.secondary,
-          hovered && { backgroundColor: secondary ? '#DCE8D6' : '#435D38' },
+          hovered && { backgroundColor: secondary ? colors.secondaryHover : colors.primaryHover },
           focused && { borderColor: colors.purple },
           { opacity: pressed || disabled || loading ? 0.72 : 1 },
         ]}
       >
         {loading ? (
-          <ActivityIndicator color={secondary ? colors.green : '#fff'} />
+          <ActivityIndicator color={secondary ? colors.green : colors.onPrimary} />
         ) : (
-          <Icon name={icon} color={secondary ? colors.green : '#fff'} size={19} />
+          <Icon name={icon} color={secondary ? colors.green : colors.onPrimary} size={19} />
         )}
         <Text style={[styles.buttonText, secondary && { color: colors.green }]}>{title}</Text>
       </Pressable>
@@ -86,6 +89,8 @@ export function Pill({
   icon?: IconName;
   tint?: 'green' | 'purple' | 'orange';
 }) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const color =
     tint === 'purple' ? colors.purple : tint === 'orange' ? colors.orange : colors.green;
   return (
@@ -108,6 +113,7 @@ export function Pill({
   );
 }
 export function SectionHeading({ title, label }: { title: string; label?: string }) {
+  const { colors, ui } = useTheme();
   return (
     <View style={[ui.row, { justifyContent: 'space-between', marginBottom: 18 }]}>
       <Text style={{ fontFamily: fonts.bold, fontSize: 18, color: colors.ink }}>{title}</Text>
@@ -117,7 +123,7 @@ export function SectionHeading({ title, label }: { title: string; label?: string
 }
 export function Waveform({
   values,
-  color = colors.purple,
+  color,
   height = 44,
   progress = 0,
   label = 'Recorded sound level',
@@ -128,6 +134,8 @@ export function Waveform({
   progress?: number;
   label?: string;
 }) {
+  const { colors } = useTheme();
+  const waveformColor = color ?? colors.purple;
   const reduced = useReducedMotion();
   const bars = values.length ? values.slice(-48) : Array<number>(48).fill(0);
   return (
@@ -148,7 +156,7 @@ export function Waveform({
           key={i}
           value={Number.isFinite(bar) ? Math.min(1, Math.max(0, bar)) : 0}
           height={height}
-          color={color}
+          color={waveformColor}
           opacity={progress && i / bars.length <= progress ? 1 : values.length ? 0.55 : 0.2}
           reduced={reduced}
         />
@@ -200,12 +208,14 @@ const WaveformBar = memo(function WaveformBar({
 export function ProgressBar({
   value,
   label,
-  color = colors.green,
+  color,
 }: {
   value: number;
   label: string;
   color?: string;
 }) {
+  const { colors } = useTheme();
+  const progressColor = color ?? colors.green;
   const reduced = useReducedMotion();
   const [width, setWidth] = useState(0);
   const fraction = Math.min(1, Math.max(0, Number.isFinite(value) ? value : 0));
@@ -226,14 +236,19 @@ export function ProgressBar({
       accessibilityLabel={label}
       accessibilityValue={{ min: 0, max: 100, now: Math.round(fraction * 100) }}
       onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
-      style={{ height: 5, borderRadius: 3, overflow: 'hidden', backgroundColor: '#E5EADF' }}
+      style={{
+        height: 5,
+        borderRadius: 3,
+        overflow: 'hidden',
+        backgroundColor: colors.progressTrack,
+      }}
     >
       <Animated.View
         style={{
           width: '100%',
           height: '100%',
           borderRadius: 3,
-          backgroundColor: color,
+          backgroundColor: progressColor,
           transform: [
             {
               translateX: progress.interpolate({
@@ -248,29 +263,30 @@ export function ProgressBar({
     </View>
   );
 }
-const styles = StyleSheet.create({
-  button: {
-    minHeight: 54,
-    borderRadius: 15,
-    backgroundColor: colors.green,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 22,
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  secondary: { backgroundColor: colors.greenLight },
-  buttonText: { fontFamily: fonts.bold, color: '#fff', fontSize: 15 },
-  pill: {
-    borderRadius: 30,
-    paddingVertical: 7,
-    paddingHorizontal: 11,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    alignSelf: 'flex-start',
-  },
-  pillText: { fontFamily: fonts.medium, fontSize: 11 },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    button: {
+      minHeight: 54,
+      borderRadius: 15,
+      backgroundColor: colors.green,
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 10,
+      paddingHorizontal: 22,
+      borderWidth: 2,
+      borderColor: 'transparent',
+    },
+    secondary: { backgroundColor: colors.greenLight },
+    buttonText: { fontFamily: fonts.bold, color: colors.onPrimary, fontSize: 15 },
+    pill: {
+      borderRadius: 30,
+      paddingVertical: 7,
+      paddingHorizontal: 11,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      alignSelf: 'flex-start',
+    },
+    pillText: { fontFamily: fonts.medium, fontSize: 11 },
+  });

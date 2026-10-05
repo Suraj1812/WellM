@@ -11,11 +11,35 @@ import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
 class WellMSnoreModule : Module() {
+  private val themePreferenceLock = Any()
+
   private val context: Context
     get() = appContext.reactContext?.applicationContext ?: throw Exceptions.AppContextLost()
 
   override fun definition() = ModuleDefinition {
     Name("WellMSnore")
+
+    AsyncFunction("getThemePreference") {
+      synchronized(themePreferenceLock) {
+        val preference = context.getSharedPreferences("wellm-preferences", Context.MODE_PRIVATE)
+          .getString("appearance", "system")
+        when (preference) {
+          "light", "dark" -> preference
+          else -> "system"
+        }
+      }
+    }
+
+    AsyncFunction("setThemePreference") { preference: String ->
+      require(preference == "system" || preference == "light" || preference == "dark") {
+        "Appearance must be system, light, or dark."
+      }
+      synchronized(themePreferenceLock) {
+        val saved = context.getSharedPreferences("wellm-preferences", Context.MODE_PRIVATE)
+          .edit().putString("appearance", preference).commit()
+        check(saved) { "Appearance could not be saved." }
+      }
+    }
 
     AsyncFunction("requestMicrophonePermission") { promise: Promise ->
       val permissions = appContext.permissions

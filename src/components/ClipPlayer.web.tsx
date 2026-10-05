@@ -1,15 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { useNights } from '../state/NightProvider';
-import { colors, ui } from './theme';
+import { useTheme } from './ThemeProvider';
 import { Icon } from './Icon';
 import { Waveform } from './Primitives';
 import type { NightSession } from '../domain/types';
 
 export function ClipPlayer({ night }: { night: NightSession }) {
+  const { colors, ui } = useTheme();
   if (!night.loudestClipUri)
     return (
-      <View style={{ padding: 19, borderRadius: 16, backgroundColor: colors.lavender }}>
+      <View style={{ padding: 19, borderRadius: 16, backgroundColor: colors.playerMutedSurface }}>
         <Text style={ui.small}>No audio clip was saved for this recording.</Text>
       </View>
     );
@@ -17,6 +18,7 @@ export function ClipPlayer({ night }: { night: NightSession }) {
 }
 
 function BrowserPlayer({ night }: { night: NightSession }) {
+  const { colors, ui } = useTheme();
   const audio = useRef<HTMLAudioElement | null>(null);
   const { engine, busy, notify } = useNights();
   const [playing, setPlaying] = useState(false);
@@ -96,7 +98,12 @@ function BrowserPlayer({ night }: { night: NightSession }) {
     }
   };
   return (
-    <View style={[ui.row, { padding: 17, borderRadius: 16, backgroundColor: '#F4F2F8', gap: 14 }]}>
+    <View
+      style={[
+        ui.row,
+        { padding: 17, borderRadius: 16, backgroundColor: colors.playerSurface, gap: 14 },
+      ]}
+    >
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={
@@ -120,9 +127,13 @@ function BrowserPlayer({ night }: { night: NightSession }) {
         })}
       >
         {!loaded && !error ? (
-          <ActivityIndicator color="#fff" />
+          <ActivityIndicator color={colors.onPlayer} />
         ) : (
-          <Icon name={error ? 'volume' : playing ? 'pause' : 'play'} color="#fff" size={17} />
+          <Icon
+            name={error ? 'volume' : playing ? 'pause' : 'play'}
+            color={colors.onPlayer}
+            size={17}
+          />
         )}
       </Pressable>
       {error ? (

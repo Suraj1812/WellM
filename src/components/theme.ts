@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-export const colors = {
+export const lightColors = {
   background: '#F7F7F2',
   white: '#FFFFFF',
   ink: '#252E2A',
@@ -7,11 +7,63 @@ export const colors = {
   green: '#3D604B',
   greenLight: '#E9F0E7',
   lavender: '#E8E4F3',
-  purple: '#77668D',
+  purple: '#6F5E85',
   border: '#E5E7DF',
   orange: '#905829',
   orangeLight: '#FBF0E3',
   navy: '#282A48',
+  onPrimary: '#FFFFFF',
+  onPlayer: '#FFFFFF',
+  primaryHover: '#435D38',
+  secondaryHover: '#DCE8D6',
+  tabsBackground: '#EDEFE8',
+  activeTab: '#FFFFFF',
+  scoreSurface: '#EEF2E9',
+  scoreBorder: '#E1E8DA',
+  scoreTrack: '#DCE5D4',
+  scoreCaption: '#61755B',
+  playerSurface: '#F4F2F8',
+  playerMutedSurface: '#E8E3EF',
+  progressTrack: '#E5EADF',
+  divider: '#EEF0E8',
+  controlSurface: '#F1F4ED',
+  unselectedBar: '#ACC0A5',
+  overlay: 'rgba(25,30,25,.4)',
+};
+export type ThemeColors = typeof lightColors;
+export type ThemeMode = 'light' | 'dark';
+export type ThemePreference = ThemeMode | 'system';
+
+export const darkColors: ThemeColors = {
+  background: '#151C18',
+  white: '#202923',
+  ink: '#ECF2EB',
+  muted: '#AFBEB1',
+  green: '#A4CFB0',
+  greenLight: '#2B4032',
+  lavender: '#332B42',
+  purple: '#C9B5E8',
+  border: '#3D4B41',
+  orange: '#EDB989',
+  orangeLight: '#423021',
+  navy: '#BFC5EB',
+  onPrimary: '#14231A',
+  onPlayer: '#241C30',
+  primaryHover: '#B7DDC1',
+  secondaryHover: '#364F3F',
+  tabsBackground: '#232E27',
+  activeTab: '#37483C',
+  scoreSurface: '#25382B',
+  scoreBorder: '#3A5140',
+  scoreTrack: '#405B49',
+  scoreCaption: '#B6CBB6',
+  playerSurface: '#2D2637',
+  playerMutedSurface: '#3B3149',
+  progressTrack: '#354B3C',
+  divider: '#344239',
+  controlSurface: '#293C30',
+  unselectedBar: '#6B9676',
+  overlay: 'rgba(0,0,0,.65)',
 };
 export const fonts = {
   regular: 'DMSans_400Regular',
@@ -19,24 +71,25 @@ export const fonts = {
   bold: 'DMSans_600SemiBold',
   serif: 'Fraunces_400Regular',
 };
-export const ui = StyleSheet.create({
-  eyebrow: { fontFamily: fonts.bold, fontSize: 11, letterSpacing: 2.2, color: colors.muted },
-  title: {
-    fontFamily: fonts.serif,
-    color: colors.ink,
-    fontSize: 48,
-    lineHeight: 55,
-    letterSpacing: -1.8,
-  },
-  subtitle: { fontFamily: fonts.regular, color: colors.muted, fontSize: 15, lineHeight: 24 },
-  body: { fontFamily: fonts.regular, color: colors.ink, fontSize: 14, lineHeight: 22 },
-  card: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 22,
-    padding: 26,
-  },
-  row: { flexDirection: 'row', alignItems: 'center' },
-  small: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 19, color: colors.muted },
-});
+export const createUi = (colors: ThemeColors) =>
+  StyleSheet.create({
+    eyebrow: { fontFamily: fonts.bold, fontSize: 11, letterSpacing: 2.2, color: colors.muted },
+    title: {
+      fontFamily: fonts.serif,
+      color: colors.ink,
+      fontSize: 48,
+      lineHeight: 55,
+      letterSpacing: -1.8,
+    },
+    subtitle: { fontFamily: fonts.regular, color: colors.muted, fontSize: 15, lineHeight: 24 },
+    body: { fontFamily: fonts.regular, color: colors.ink, fontSize: 14, lineHeight: 22 },
+    card: {
+      backgroundColor: colors.white,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 22,
+      padding: 26,
+    },
+    row: { flexDirection: 'row', alignItems: 'center' },
+    small: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 19, color: colors.muted },
+  });

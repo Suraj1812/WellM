@@ -5,7 +5,8 @@ import { useNights } from '../state/NightProvider';
 import { Button, Pill, useCompact } from '../components/Primitives';
 import { Icon } from '../components/Icon';
 import { WeekChart } from '../components/WeekChart';
-import { colors, fonts, ui } from '../components/theme';
+import { fonts, type ThemeColors } from '../components/theme';
+import { useTheme, useThemedStyles } from '../components/ThemeProvider';
 import Reveal from '../components/Reveal';
 import {
   getWeekDays,
@@ -16,6 +17,8 @@ import {
 } from '../domain';
 
 export default function Week() {
+  const { colors, ui } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const compact = useCompact();
   const { nights, ready, notify } = useNights();
   const [offset, setOffset] = useState(0);
@@ -219,14 +222,15 @@ export default function Week() {
   );
 }
 
-const styles = StyleSheet.create({
-  arrow: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#F1F4ED',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pressed: { backgroundColor: '#DCE8D6', transform: [{ scale: 0.95 }] },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    arrow: {
+      width: 44,
+      height: 44,
+      borderRadius: 12,
+      backgroundColor: colors.controlSurface,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    pressed: { backgroundColor: colors.secondaryHover, transform: [{ scale: 0.95 }] },
+  });

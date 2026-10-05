@@ -5,11 +5,14 @@ import { useNights } from '../state/NightProvider';
 import { Icon } from '../components/Icon';
 import { Button, SectionHeading, Waveform } from '../components/Primitives';
 import { SignalHalo } from '../components/Motion';
-import { colors, fonts, ui } from '../components/theme';
+import { fonts, type ThemeColors } from '../components/theme';
+import { useTheme, useThemedStyles } from '../components/ThemeProvider';
 import Reveal from '../components/Reveal';
 import { formatDuration, formatRelativeNightDate } from '../domain';
 
 export default function Tonight() {
+  const { colors, ui } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const { engine, nights, start, stop, busy, ready } = useNights();
   const recording = engine.status === 'recording';
   const active = engine.active;
@@ -34,7 +37,7 @@ export default function Tonight() {
         </View>
       )}
       <Reveal variant="scale">
-        <View style={styles.recorder}>
+        <View style={[ui.card, styles.recorder]}>
           <View style={{ alignItems: 'center', paddingVertical: 28 }}>
             <SignalHalo active={recording} level={active?.waveform.at(-1) || 0}>
               <View style={styles.mic}>
@@ -96,7 +99,7 @@ export default function Tonight() {
               accessibilityRole="button"
               accessibilityLabel="Open your latest morning summary"
               onPress={() => router.navigate({ pathname: '/morning', params: { id: latest.id } })}
-              style={({ pressed }) => [styles.last, { opacity: pressed ? 0.7 : 1 }]}
+              style={({ pressed }) => [ui.card, styles.last, { opacity: pressed ? 0.7 : 1 }]}
             >
               <View style={{ flex: 1, gap: 4 }}>
                 <Text style={{ fontFamily: fonts.medium, color: colors.ink, fontSize: 14 }}>
@@ -119,6 +122,7 @@ export default function Tonight() {
   );
 }
 function LiveMetric({ value, label }: { value: string; label: string }) {
+  const { colors, ui } = useTheme();
   return (
     <View style={{ alignItems: 'center', gap: 5 }}>
       <Text style={{ fontFamily: fonts.medium, fontSize: 20, color: colors.green }}>{value}</Text>
@@ -126,46 +130,47 @@ function LiveMetric({ value, label }: { value: string; label: string }) {
     </View>
   );
 }
-const styles = StyleSheet.create({
-  title: {
-    fontFamily: fonts.serif,
-    color: colors.ink,
-    fontSize: 34,
-    lineHeight: 42,
-    marginBottom: 24,
-  },
-  recorder: { ...ui.card, padding: 26 },
-  mic: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: colors.greenLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  timer: {
-    fontFamily: fonts.serif,
-    color: colors.ink,
-    fontSize: 34,
-    lineHeight: 44,
-    marginTop: 22,
-    fontVariant: ['tabular-nums'],
-  },
-  metrics: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    borderTopWidth: 1,
-    borderColor: colors.border,
-    paddingVertical: 22,
-    marginBottom: 8,
-  },
-  last: { ...ui.card, flexDirection: 'row', alignItems: 'center', padding: 20, gap: 20 },
-  error: {
-    flexDirection: 'row',
-    gap: 10,
-    padding: 16,
-    borderRadius: 14,
-    backgroundColor: colors.orangeLight,
-    marginBottom: 18,
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    title: {
+      fontFamily: fonts.serif,
+      color: colors.ink,
+      fontSize: 34,
+      lineHeight: 42,
+      marginBottom: 24,
+    },
+    recorder: { padding: 26 },
+    mic: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: colors.greenLight,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    timer: {
+      fontFamily: fonts.serif,
+      color: colors.ink,
+      fontSize: 34,
+      lineHeight: 44,
+      marginTop: 22,
+      fontVariant: ['tabular-nums'],
+    },
+    metrics: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      borderTopWidth: 1,
+      borderColor: colors.border,
+      paddingVertical: 22,
+      marginBottom: 8,
+    },
+    last: { flexDirection: 'row', alignItems: 'center', padding: 20, gap: 20 },
+    error: {
+      flexDirection: 'row',
+      gap: 10,
+      padding: 16,
+      borderRadius: 14,
+      backgroundColor: colors.orangeLight,
+      marginBottom: 18,
+    },
+  });

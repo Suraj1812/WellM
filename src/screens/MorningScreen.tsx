@@ -6,11 +6,14 @@ import { useNights } from '../state/NightProvider';
 import { Button, Pill, SectionHeading, useCompact } from '../components/Primitives';
 import { Icon } from '../components/Icon';
 import { ClipPlayer } from '../components/ClipPlayer';
-import { colors, fonts, ui } from '../components/theme';
+import { fonts, type ThemeColors } from '../components/theme';
+import { useTheme, useThemedStyles } from '../components/ThemeProvider';
 import Reveal from '../components/Reveal';
 import { useReducedMotion } from '../components/Motion';
 import { formatClock, formatDuration, formatRelativeNightDate } from '../domain';
 export default function Morning() {
+  const { colors, ui } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const compact = useCompact();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { nights, ready, remove, engine } = useNights();
@@ -79,8 +82,8 @@ export default function Morning() {
               ui.card,
               {
                 alignItems: 'center',
-                backgroundColor: '#EEF2E9',
-                borderColor: '#E1E8DA',
+                backgroundColor: colors.scoreSurface,
+                borderColor: colors.scoreBorder,
               },
             ]}
           >
@@ -102,7 +105,14 @@ export default function Morning() {
               }
             >
               <Svg width={218} height={218} style={{ position: 'absolute' }} viewBox="0 0 218 218">
-                <Circle cx="109" cy="109" r="92" fill="none" stroke="#DCE5D4" strokeWidth="12" />
+                <Circle
+                  cx="109"
+                  cy="109"
+                  r="92"
+                  fill="none"
+                  stroke={colors.scoreTrack}
+                  strokeWidth="12"
+                />
                 <Circle
                   cx="109"
                   cy="109"
@@ -125,7 +135,7 @@ export default function Morning() {
               >
                 {night.analyzedSeconds ? night.score : '—'}
               </Text>
-              <Text style={{ fontFamily: fonts.medium, fontSize: 12, color: '#6B7E64' }}>
+              <Text style={{ fontFamily: fonts.medium, fontSize: 12, color: colors.scoreCaption }}>
                 OUT OF 100
               </Text>
             </View>
@@ -138,14 +148,14 @@ export default function Morning() {
                 {
                   width: '100%',
                   borderTopWidth: 1,
-                  borderColor: '#DCE5D4',
+                  borderColor: colors.scoreBorder,
                   paddingTop: 23,
                   justifyContent: 'space-around',
                 },
               ]}
             >
               <Metric value={formatDuration(night.snoringSeconds)} label="Snoring" />
-              <View style={{ width: 1, height: 42, backgroundColor: '#DCE5D4' }} />
+              <View style={{ width: 1, height: 42, backgroundColor: colors.scoreBorder }} />
               <Metric value={formatDuration(night.durationSeconds)} label="Recorded" />
             </View>
           </View>
@@ -332,6 +342,7 @@ export default function Morning() {
   );
 }
 function Metric({ value, label }: { value: string; label: string }) {
+  const { colors, ui } = useTheme();
   return (
     <View style={{ alignItems: 'center' }}>
       <Text style={{ fontFamily: fonts.serif, fontSize: 30, color: colors.green }}>{value}</Text>
@@ -348,6 +359,7 @@ function QualityRow({
   value: string;
   last?: boolean;
 }) {
+  const { colors, ui } = useTheme();
   return (
     <View
       style={[
@@ -356,7 +368,7 @@ function QualityRow({
           justifyContent: 'space-between',
           paddingVertical: 10,
           borderBottomWidth: last ? 0 : 1,
-          borderColor: '#EEF0E8',
+          borderColor: colors.divider,
         },
       ]}
     >
@@ -376,31 +388,32 @@ function QualityRow({
     </View>
   );
 }
-const styles = StyleSheet.create({
-  cardTitle: { fontFamily: fonts.bold, fontSize: 15, color: colors.ink },
-  emptyIcon: {
-    backgroundColor: colors.lavender,
-    borderRadius: 35,
-    width: 90,
-    height: 90,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  historyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 14,
-    borderRadius: 13,
-    borderBottomWidth: 1,
-    borderColor: colors.border,
-    marginBottom: 4,
-  },
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(25,30,25,.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    cardTitle: { fontFamily: fonts.bold, fontSize: 15, color: colors.ink },
+    emptyIcon: {
+      backgroundColor: colors.lavender,
+      borderRadius: 35,
+      width: 90,
+      height: 90,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    historyRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      padding: 14,
+      borderRadius: 13,
+      borderBottomWidth: 1,
+      borderColor: colors.border,
+      marginBottom: 4,
+    },
+    overlay: {
+      flex: 1,
+      backgroundColor: colors.overlay,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 24,
+    },
+  });

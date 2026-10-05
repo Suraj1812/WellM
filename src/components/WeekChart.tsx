@@ -3,7 +3,8 @@ import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-nativ
 import type { NightSession, WeekDay } from '../domain/types';
 import { Icon } from './Icon';
 import { useMotionPreference } from './Motion';
-import { colors, fonts, ui } from './theme';
+import { fonts, type ThemeColors } from './theme';
+import { useTheme, useThemedStyles } from './ThemeProvider';
 
 const plotHeight = 160;
 
@@ -22,6 +23,8 @@ export function WeekChart({
   onExplain(day: WeekDay, night: NightSession): void;
   animationKey: string;
 }) {
+  const { colors, ui } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const reduced = useMotionPreference();
   const [bars] = useState(() => Array.from({ length: 7 }, () => new Animated.Value(0)));
   const [lines] = useState(() => Array.from({ length: 5 }, () => new Animated.Value(0)));
@@ -101,7 +104,7 @@ export function WeekChart({
               ? night.eligible
                 ? selected
                   ? colors.green
-                  : '#ACC0A5'
+                  : colors.unselectedBar
                 : colors.orange
               : colors.border;
             const progress = bars[index];
@@ -223,43 +226,44 @@ export function WeekChart({
   );
 }
 
-const styles = StyleSheet.create({
-  chart: { flexDirection: 'row', marginTop: 24, height: plotHeight + 68 },
-  axis: { width: 27, height: plotHeight, marginTop: 24, justifyContent: 'space-between' },
-  tick: { fontSize: 10, lineHeight: 10, transform: [{ translateY: -5 }] },
-  grid: {
-    position: 'absolute',
-    top: 24,
-    left: 0,
-    right: 0,
-    height: plotHeight,
-    justifyContent: 'space-between',
-  },
-  columns: { flexDirection: 'row', gap: 5 },
-  column: { flex: 1, alignItems: 'center', minWidth: 0 },
-  daySelect: { width: '100%', alignItems: 'center' },
-  barSpace: {
-    height: plotHeight,
-    marginTop: 24,
-    width: '100%',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-  },
-  score: { position: 'absolute', fontFamily: fonts.medium, fontSize: 12 },
-  qualityMarker: {
-    position: 'absolute',
-    top: plotHeight + 8,
-    width: '100%',
-    maxWidth: 28,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  qualityMarkerIcon: {
-    backgroundColor: colors.white,
-    borderRadius: 10,
-    padding: 2,
-  },
-  day: { marginTop: 10, paddingHorizontal: 4, paddingVertical: 7, borderRadius: 8 },
-  today: { marginTop: 3, width: 3, height: 3, borderRadius: 2 },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    chart: { flexDirection: 'row', marginTop: 24, height: plotHeight + 68 },
+    axis: { width: 27, height: plotHeight, marginTop: 24, justifyContent: 'space-between' },
+    tick: { fontSize: 10, lineHeight: 10, transform: [{ translateY: -5 }] },
+    grid: {
+      position: 'absolute',
+      top: 24,
+      left: 0,
+      right: 0,
+      height: plotHeight,
+      justifyContent: 'space-between',
+    },
+    columns: { flexDirection: 'row', gap: 5 },
+    column: { flex: 1, alignItems: 'center', minWidth: 0 },
+    daySelect: { width: '100%', alignItems: 'center' },
+    barSpace: {
+      height: plotHeight,
+      marginTop: 24,
+      width: '100%',
+      justifyContent: 'flex-end',
+      alignItems: 'center',
+    },
+    score: { position: 'absolute', fontFamily: fonts.medium, fontSize: 12 },
+    qualityMarker: {
+      position: 'absolute',
+      top: plotHeight + 8,
+      width: '100%',
+      maxWidth: 28,
+      height: 32,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    qualityMarkerIcon: {
+      backgroundColor: colors.white,
+      borderRadius: 10,
+      padding: 2,
+    },
+    day: { marginTop: 10, paddingHorizontal: 4, paddingVertical: 7, borderRadius: 8 },
+    today: { marginTop: 3, width: 3, height: 3, borderRadius: 2 },
+  });

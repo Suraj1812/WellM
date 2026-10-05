@@ -2,21 +2,26 @@ import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { useNights } from '../state/NightProvider';
-import { colors, fonts, ui } from './theme';
+import { fonts } from './theme';
+import { useTheme } from './ThemeProvider';
 import { Icon } from './Icon';
 import { Waveform } from './Primitives';
 import type { NightSession } from '../domain/types';
 export function ClipPlayer({ night }: { night: NightSession }) {
+  const { colors, ui } = useTheme();
   if (!night.loudestClipUri)
     return (
       <View
-        style={[ui.row, { padding: 19, borderRadius: 16, backgroundColor: '#F4F2F8', gap: 16 }]}
+        style={[
+          ui.row,
+          { padding: 19, borderRadius: 16, backgroundColor: colors.playerSurface, gap: 16 },
+        ]}
       >
         <View
           style={{
             width: 43,
             height: 43,
-            backgroundColor: '#E8E3EF',
+            backgroundColor: colors.playerMutedSurface,
             borderRadius: 22,
             alignItems: 'center',
             justifyContent: 'center',
@@ -37,6 +42,7 @@ export function ClipPlayer({ night }: { night: NightSession }) {
   return <LocalPlayer key={night.id} night={night} />;
 }
 function LocalPlayer({ night }: { night: NightSession }) {
+  const { colors, ui } = useTheme();
   const player = useAudioPlayer(
     { uri: night.loudestClipUri! },
     { updateInterval: 150, keepAudioSessionActive: true },
@@ -74,7 +80,12 @@ function LocalPlayer({ night }: { night: NightSession }) {
     }
   };
   return (
-    <View style={[ui.row, { padding: 17, borderRadius: 16, backgroundColor: '#F4F2F8', gap: 14 }]}>
+    <View
+      style={[
+        ui.row,
+        { padding: 17, borderRadius: 16, backgroundColor: colors.playerSurface, gap: 14 },
+      ]}
+    >
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={
@@ -98,11 +109,11 @@ function LocalPlayer({ night }: { night: NightSession }) {
         })}
       >
         {!status.isLoaded && !status.error ? (
-          <ActivityIndicator color="#fff" />
+          <ActivityIndicator color={colors.onPlayer} />
         ) : (
           <Icon
             name={status.error ? 'volume' : status.playing ? 'pause' : 'play'}
-            color="#fff"
+            color={colors.onPlayer}
             size={17}
           />
         )}

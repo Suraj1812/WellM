@@ -1,11 +1,33 @@
 import AVFoundation
 import ExpoModulesCore
+import Foundation
+
+private enum ThemePreferenceError: LocalizedError {
+  case invalidPreference
+
+  var errorDescription: String? {
+    "Appearance must be system, light, or dark."
+  }
+}
 
 public final class WellMSnoreModule: Module {
   private let engine = WellMSnoreEngine.shared
+  private let themePreferenceQueue = DispatchQueue(label: "wellm.appearance")
 
   public func definition() -> ModuleDefinition {
     Name("WellMSnore")
+
+    AsyncFunction("getThemePreference") { () -> String in
+      let preference = UserDefaults.standard.string(forKey: "wellm.appearance") ?? "system"
+      return ["system", "light", "dark"].contains(preference) ? preference : "system"
+    }.runOnQueue(themePreferenceQueue)
+
+    AsyncFunction("setThemePreference") { (preference: String) throws in
+      guard ["system", "light", "dark"].contains(preference) else {
+        throw ThemePreferenceError.invalidPreference
+      }
+      UserDefaults.standard.set(preference, forKey: "wellm.appearance")
+    }.runOnQueue(themePreferenceQueue)
 
     AsyncFunction("requestMicrophonePermission") { (promise: Promise) in
       if #available(iOS 17.0, *) {
