@@ -12,12 +12,14 @@ export function WeekChart({
   nights,
   selectedIndex,
   onSelect,
+  onExplain,
   animationKey,
 }: {
   days: WeekDay[];
   nights: (NightSession | undefined)[];
   selectedIndex: number;
   onSelect(key: string): void;
+  onExplain(day: WeekDay, night: NightSession): void;
   animationKey: string;
 }) {
   const reduced = useMotionPreference();
@@ -104,106 +106,115 @@ export function WeekChart({
               : colors.border;
             const progress = bars[index];
             return (
-              <Pressable
-                key={day.key}
-                accessibilityRole="button"
-                accessibilityState={{ selected }}
-                accessibilityLabel={`${day.date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}, ${night ? (score === null ? `no analyzed audio. ${night.exclusionReasons.join(' ')}` : `snoring score ${score}. ${night.eligible ? 'Counted in average.' : `Excluded from average. ${night.exclusionReasons.join(' ')}`}`) : 'No recording'}`}
-                onPress={() => onSelect(day.key)}
-                style={({ pressed }) => [styles.column, pressed && { opacity: 0.6 }]}
-              >
-                <View style={styles.barSpace}>
-                  {score !== null && (
-                    <Animated.Text
-                      style={[
-                        styles.score,
-                        {
-                          bottom: height + 7,
-                          color: selected ? colors.green : colors.muted,
+              <View key={day.key} style={styles.column}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  accessibilityLabel={`${day.date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}, ${night ? (score === null ? `no analyzed audio. ${night.exclusionReasons.join(' ')}` : `snoring score ${score}. ${night.eligible ? 'Counted in average.' : `Excluded from average. ${night.exclusionReasons.join(' ')}`}`) : 'No recording'}`}
+                  onPress={() => onSelect(day.key)}
+                  style={({ pressed }) => [styles.daySelect, pressed && { opacity: 0.6 }]}
+                >
+                  <View style={styles.barSpace}>
+                    {score !== null && (
+                      <Animated.Text
+                        style={[
+                          styles.score,
+                          {
+                            bottom: height + 7,
+                            color: selected ? colors.green : colors.muted,
+                            opacity: progress,
+                            transform: [
+                              {
+                                translateY: progress.interpolate({
+                                  inputRange: [0, 1],
+                                  outputRange: [height, 0],
+                                }),
+                              },
+                            ],
+                          },
+                        ]}
+                      >
+                        {score}
+                      </Animated.Text>
+                    )}
+                    {height > 0 ? (
+                      <Animated.View
+                        testID={`week-bar-${day.key}`}
+                        style={{
+                          width: '78%',
+                          maxWidth: 58,
+                          height,
+                          backgroundColor: color,
+                          borderWidth: night?.eligible ? 0 : 1,
+                          borderColor: colors.orange,
+                          borderStyle: 'dashed',
+                          borderTopLeftRadius: 7,
+                          borderTopRightRadius: 7,
                           opacity: progress,
                           transform: [
                             {
                               translateY: progress.interpolate({
                                 inputRange: [0, 1],
-                                outputRange: [height, 0],
+                                outputRange: [height / 2, 0],
+                              }),
+                            },
+                            { scaleY: progress },
+                          ],
+                        }}
+                      />
+                    ) : (
+                      <Animated.View
+                        testID={`week-baseline-${day.key}`}
+                        style={{
+                          width: night ? '62%' : 12,
+                          height: night ? 3 : 2,
+                          borderRadius: 2,
+                          backgroundColor: color,
+                          opacity: progress,
+                          transform: [
+                            {
+                              translateY: progress.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [6, 0],
                               }),
                             },
                           ],
-                        },
-                      ]}
+                        }}
+                      />
+                    )}
+                  </View>
+                  <View style={[styles.day, selected && { backgroundColor: colors.greenLight }]}>
+                    <Text
+                      style={{
+                        fontFamily: selected ? fonts.bold : fonts.regular,
+                        fontSize: 11,
+                        color: selected ? colors.green : colors.muted,
+                      }}
                     >
-                      {score}
-                    </Animated.Text>
-                  )}
-                  {height > 0 ? (
-                    <Animated.View
-                      testID={`week-bar-${day.key}`}
-                      style={{
-                        width: '78%',
-                        maxWidth: 58,
-                        height,
-                        backgroundColor: color,
-                        borderWidth: night?.eligible ? 0 : 1,
-                        borderColor: colors.orange,
-                        borderStyle: 'dashed',
-                        borderTopLeftRadius: 7,
-                        borderTopRightRadius: 7,
-                        opacity: progress,
-                        transform: [
-                          {
-                            translateY: progress.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [height / 2, 0],
-                            }),
-                          },
-                          { scaleY: progress },
-                        ],
-                      }}
-                    />
-                  ) : (
-                    <Animated.View
-                      testID={`week-baseline-${day.key}`}
-                      style={{
-                        width: night ? '62%' : 12,
-                        height: night ? 3 : 2,
-                        borderRadius: 2,
-                        backgroundColor: color,
-                        opacity: progress,
-                        transform: [
-                          {
-                            translateY: progress.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [6, 0],
-                            }),
-                          },
-                        ],
-                      }}
-                    />
-                  )}
-                  {night && !night.eligible && (
-                    <View style={styles.qualityMarker}>
-                      <Icon name="info" color={colors.orange} size={12} />
-                    </View>
-                  )}
-                </View>
-                <View style={[styles.day, selected && { backgroundColor: colors.greenLight }]}>
-                  <Text
-                    style={{
-                      fontFamily: selected ? fonts.bold : fonts.regular,
-                      fontSize: 11,
-                      color: selected ? colors.green : colors.muted,
-                    }}
+                      {day.label}
+                    </Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.today,
+                      { backgroundColor: day.isToday ? colors.green : 'transparent' },
+                    ]}
+                  />
+                </Pressable>
+                {night && !night.eligible && (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Why ${day.date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} did not count`}
+                    onPress={() => onExplain(day, night)}
+                    hitSlop={{ top: 4, bottom: 4 }}
+                    style={({ pressed }) => [styles.qualityMarker, pressed && { opacity: 0.6 }]}
                   >
-                    {day.label}
-                  </Text>
-                </View>
-                <View
-                  style={[
-                    styles.today,
-                    { backgroundColor: day.isToday ? colors.green : 'transparent' },
-                  ]}
-                />
-              </Pressable>
+                    <View style={styles.qualityMarkerIcon}>
+                      <Icon name="info" color={colors.orange} size={16} />
+                    </View>
+                  </Pressable>
+                )}
+              </View>
             );
           })}
         </View>
@@ -226,6 +237,7 @@ const styles = StyleSheet.create({
   },
   columns: { flexDirection: 'row', gap: 5 },
   column: { flex: 1, alignItems: 'center', minWidth: 0 },
+  daySelect: { width: '100%', alignItems: 'center' },
   barSpace: {
     height: plotHeight,
     marginTop: 24,
@@ -236,10 +248,17 @@ const styles = StyleSheet.create({
   score: { position: 'absolute', fontFamily: fonts.medium, fontSize: 12 },
   qualityMarker: {
     position: 'absolute',
-    bottom: -1,
-    right: 0,
+    top: plotHeight + 8,
+    width: '100%',
+    maxWidth: 28,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  qualityMarkerIcon: {
     backgroundColor: colors.white,
-    borderRadius: 6,
+    borderRadius: 10,
+    padding: 2,
   },
   day: { marginTop: 10, paddingHorizontal: 4, paddingVertical: 7, borderRadius: 8 },
   today: { marginTop: 3, width: 3, height: 3, borderRadius: 2 },

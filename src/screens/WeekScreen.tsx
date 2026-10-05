@@ -17,7 +17,7 @@ import {
 
 export default function Week() {
   const compact = useCompact();
-  const { nights, ready } = useNights();
+  const { nights, ready, notify } = useNights();
   const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const anchor = new Date();
@@ -114,6 +114,13 @@ export default function Week() {
           nights={weekNights}
           selectedIndex={selectedIndex}
           onSelect={setSelected}
+          onExplain={(day, night) => {
+            setSelected(day.key);
+            notify(
+              'Not counted',
+              `${formatNightDate(day.date.getTime())}\n\n${night.exclusionReasons.join('\n')}`,
+            );
+          }}
           animationKey={animationKey}
         />
       </View>
@@ -123,8 +130,15 @@ export default function Week() {
         style={{ marginTop: 18 }}
       >
         <View style={[ui.card, { padding: compact ? 20 : 26 }]}>
-          <View style={[ui.row, { justifyContent: 'space-between', gap: 12, marginBottom: 14 }]}>
-            <Text style={{ fontFamily: fonts.bold, fontSize: 16, color: colors.ink }}>
+          <View
+            style={[
+              ui.row,
+              { justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 14 },
+            ]}
+          >
+            <Text
+              style={{ fontFamily: fonts.bold, fontSize: 16, lineHeight: 22, color: colors.ink }}
+            >
               {formatNightDate(selectedDay.date.getTime())}
             </Text>
             {selectedNight && (
@@ -136,12 +150,23 @@ export default function Week() {
           </View>
           {selectedNight ? (
             <>
-              <View style={[ui.row, { gap: 18, marginBottom: 10 }]}>
-                <Text style={{ fontFamily: fonts.serif, fontSize: 32, color: colors.green }}>
-                  {selectedNight.analyzedSeconds ? selectedNight.score : '—'}
-                  <Text style={ui.small}> / 100</Text>
-                </Text>
-                <Text style={ui.small}>
+              <View style={[ui.row, { flexWrap: 'wrap', gap: 18, marginBottom: 10 }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4 }}>
+                  <Text
+                    testID="selected-night-score"
+                    style={{
+                      fontFamily: fonts.serif,
+                      fontSize: 32,
+                      lineHeight: 44,
+                      includeFontPadding: false,
+                      color: colors.green,
+                    }}
+                  >
+                    {selectedNight.analyzedSeconds ? selectedNight.score : '—'}
+                  </Text>
+                  <Text style={ui.small}>/ 100</Text>
+                </View>
+                <Text style={[ui.small, { flex: 1, minWidth: 140 }]}>
                   {formatMinutes(selectedNight.snoringSeconds)} min snoring ·{' '}
                   {formatDuration(selectedNight.durationSeconds)} recorded
                 </Text>

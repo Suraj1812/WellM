@@ -2,14 +2,14 @@
   "expo": {
     "name": "WellM",
     "slug": "wellm",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/brand/wellm-app-icon.png",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.wellm.nights",
-      "buildNumber": "2"
+      "buildNumber": "3"
     },
     "android": {
       "adaptiveIcon": {
@@ -18,7 +18,7 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.wellm.nights",
-      "versionCode": 2
+      "versionCode": 3
     },
     "web": {
       "favicon": "./assets/brand/wellm-app-icon.png"

@@ -207,12 +207,16 @@ export default function Morning() {
                 accessibilityRole="button"
                 accessibilityLabel={details ? 'Hide recording details' : 'Show recording details'}
                 accessibilityState={{ expanded: details }}
+                aria-expanded={details}
                 onPress={() => setDetails((value) => !value)}
-                style={{ paddingVertical: 12, minHeight: 44 }}
+                style={[ui.row, { gap: 8, paddingVertical: 12, minHeight: 44 }]}
               >
                 <Text style={[ui.small, { color: colors.green }]}>
                   {details ? 'Hide details' : 'Recording details'}
                 </Text>
+                <View style={{ transform: [{ rotate: details ? '-90deg' : '90deg' }] }}>
+                  <Icon name="chevron" size={16} />
+                </View>
               </Pressable>
               {details && (
                 <>

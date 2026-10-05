@@ -44,12 +44,20 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
   const { notice, dismissNotice, removeAll, engine, notify } = useNights();
   const [help, setHelp] = useState(false);
   const [clear, setClear] = useState(false);
+  const dialogVisible = help || !!notice || clear;
+  const [displayedDialog, setDisplayedDialog] = useState({ notice, clear });
+  // Preserve the visible content while the native/browser modal finishes fading out.
+  if (dialogVisible && (displayedDialog.notice !== notice || displayedDialog.clear !== clear)) {
+    setDisplayedDialog({ notice, clear });
+  }
   const closeDialog = () => {
     setHelp(false);
     setClear(false);
     dismissNotice();
   };
-  const dialogTitle = notice?.title || (clear ? 'Delete all recordings?' : 'About WellM');
+  const dialogTitle =
+    displayedDialog.notice?.title ||
+    (displayedDialog.clear ? 'Delete all recordings?' : 'About WellM');
   const navigation = (
     <View style={[styles.tabs, compact && styles.mobileTabs]}>
       {tabs.map((tab) => {
@@ -179,12 +187,12 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
         </View>
       )}
       <Modal
-        visible={help || !!notice || clear}
+        visible={dialogVisible}
         transparent
         animationType={reduced ? 'none' : 'fade'}
         onRequestClose={closeDialog}
       >
-        <View style={styles.overlay}>
+        <View style={styles.overlay} pointerEvents={dialogVisible ? 'auto' : 'none'}>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Dismiss dialog"
@@ -222,12 +230,14 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
               showsVerticalScrollIndicator={false}
               style={{ flexShrink: 1, minHeight: 0 }}
             >
-              {notice ? (
+              {displayedDialog.notice ? (
                 <>
-                  <Text style={[ui.body, { marginVertical: 20 }]}>{notice.message}</Text>
+                  <Text style={[ui.body, { marginVertical: 20 }]}>
+                    {displayedDialog.notice.message}
+                  </Text>
                   <Button title="Got it" icon="check" onPress={closeDialog} />
                 </>
-              ) : clear ? (
+              ) : displayedDialog.clear ? (
                 <>
                   <Text style={[ui.body, { marginVertical: 20 }]}>
                     Summaries and audio clips will be permanently deleted.
