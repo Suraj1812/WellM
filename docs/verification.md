@@ -97,3 +97,25 @@ Published as [v1.0.1-preview](https://github.com/Suraj1812/WellM/releases/tag/v1
 - The preview signer SHA-256 is `fac61745dc0903786fb9ede62a962b399f7348f0bb6f899b8332667591033b9c`, matching both the original APK and the Expo template certificate. Installing this preview over the original can preserve local recordings.
 
 The physical-phone thirty-minute locked-screen run, two-minute snoring video, and complete iOS build remain pending. A successful APK build does not establish those device results.
+
+## 5 October 2026 UI and dark-mode verification
+
+Source revision: [`c4e67807`](https://github.com/Suraj1812/WellM/commit/c4e67807). [Source CI run 37328047162](https://github.com/Suraj1812/WellM/actions/runs/37328047162) passed. The [Android 1.0.3 preview build, run 37328092446](https://github.com/Suraj1812/WellM/actions/runs/37328092446), passed, including native compilation, three Android clip tests with zero failures or errors, release packaging, signature verification, and 16 KB ZIP alignment. Local TypeScript, lint, formatting, 29 tests, production web export, and Expo Doctor (21/21) also passed.
+
+- Light and dark themes use the moon/sun button beside the header info button. Browser theme selection survives reload. Native selection is implemented using private device preferences; physical-phone persistence has not yet been verified on the updated build. Theme changes preserve the recording provider and session state.
+- Browser UI checks covered the down/up chevrons beside Recording details/Hide details, the Week score without clipping, and chart information with the selected session's exclusion reasons. Actual chart values animate upward from the baseline, with immediate rendering when reduced motion is enabled.
+- Popup headings and close buttons share an aligned row. Clicking outside closes the popup; clicking its body does not. The displayed notice stays unchanged during the exit fade.
+- A real browser microphone recording with snoring playback displayed score **31**, **61 recorded seconds**, **18 detected snoring seconds**, **99% analysis coverage**, and **8% noisy analyzed audio**. These are rounded interface values from captured audio. This short session remains excluded from the weekly average because it is under 30 minutes; it provides browser inference evidence, not native phone evidence.
+
+The user's report of score 0 while playing snoring on the Android phone remains unresolved. No verified thirty-minute screen-locked phone run or required two-minute real-phone video has been provided. Browser results and successful source CI do not establish those acceptance results.
+
+### Android preview 1.0.3 artifact
+
+[Release v1.0.3-preview](https://github.com/Suraj1812/WellM/releases/tag/v1.0.3-preview) contains the APK, checksum, verification report, exact source revision, and native test XML. Package `com.wellm.nights`, version `1.0.3`, version code `4`; `arm64-v8a`, minimum SDK 24, target SDK 36.
+
+- APK size: 54,999,366 bytes. SHA-256: `f8e16e561035a72db6306899f54508c2c59d29f4918b78efbfb459db5f0c895b`.
+- Embedded bundle: 2,384,068 bytes. The downloaded artifact contains both light/dark toggle labels, the appearance storage key, and compiled native preference methods. Its exact source revision and bundled YAMNet model/license were independently checked.
+- The actual embedded signer certificate SHA-256 is `fac61745dc0903786fb9ede62a962b399f7348f0bb6f899b8332667591033b9c`, matching earlier previews. Install over the existing app; uninstalling removes its local history.
+- Downloaded APK checksum matches the build report and checksum file. The three native tests have zero failures, errors, or skipped tests.
+
+This release changes appearance and UI behavior; it does not resolve the reported physical-phone score-0 case or replace the outstanding device acceptance evidence.

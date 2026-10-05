@@ -6,13 +6,9 @@ The app has no account, backend, or audio upload. Android, iOS, and the browser 
 
 ## Preview and download
 
-[Download the Android preview APK](https://github.com/Suraj1812/WellM/releases/download/v1.0.1-preview/wellm-preview.apk) for an arm64 Android phone running Android 7 or newer. This sideloaded preview has an embedded bundle and model; it does not need the development server. Physical-phone recording and background behavior are still awaiting the acceptance run.
+[Download the Android preview APK](https://github.com/Suraj1812/WellM/releases/download/v1.0.3-preview/wellm-preview.apk) for an arm64 Android phone running Android 7 or newer. This sideloaded preview has an embedded bundle and model; it does not need the development server. Install this update over the existing preview to retain local recordings. Physical-phone scoring and background behavior are still awaiting the acceptance run.
 
-| Tonight                                                    | Morning                                                    | My week                                              |
-| ---------------------------------------------------------- | ---------------------------------------------------------- | ---------------------------------------------------- |
-| ![Tonight interface preview](docs/screenshots/tonight.png) | ![Morning interface preview](docs/screenshots/morning.png) | ![Week interface preview](docs/screenshots/week.png) |
-
-These are cropped browser previews with sample data, not evidence of microphone capture on a phone. See [screenshot details](docs/screenshots/README.md) and [verification results](docs/verification.md).
+The original sample-data screenshots remain archived in [screenshot details](docs/screenshots/README.md). Current recording and UI results are documented in [verification results](docs/verification.md).
 
 ## Run in a browser or Codex
 
@@ -22,6 +18,8 @@ npm run web
 ```
 
 Use Node 22.13 or later. `npm run web` prepares the bundled browser model and LiteRT WASM assets before starting Expo. Open the local URL in Codex or a browser, allow microphone access, and tap **Start listening**. The live waveform, analyzed time, snoring estimate, saved clip, and week all come from captured audio. Localhost or HTTPS is required for microphone access.
+
+Use the moon/sun button beside the header's info button to switch between light and dark mode. The app initially follows the system theme; your selection is saved in this browser or the updated native build's device preferences.
 
 Keep the browser tab visible while recording. Leaving the tab, closing it, or losing the microphone produces an interrupted recording. Use the native Android/iOS build for overnight recording with the screen locked. Browser recordings are not evidence of native background behavior. Clearing browser site data removes browser recordings.
 
