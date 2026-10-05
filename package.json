@@ -1,11 +1,12 @@
 {
   "name": "wellm",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "expo-router/entry",
   "dependencies": {
     "@expo-google-fonts/dm-sans": "^0.4.2",
     "@expo-google-fonts/fraunces": "^0.4.1",
     "@expo/metro-runtime": "~57.0.16",
+    "@litertjs/core": "2.5.3",
     "expo": "~57.0.26",
     "expo-asset": "~57.0.18",
     "expo-audio": "~57.0.5",
@@ -49,7 +50,11 @@
     "format:check": "prettier --check .",
     "check": "npm run typecheck && npm run lint && npm test && npm run format:check",
     "model:verify": "node scripts/download-model.mjs",
-    "build:web": "expo export --platform web"
+    "build:web": "expo export --platform web",
+    "prepare:web": "node scripts/prepare-web-audio.mjs",
+    "prestart": "npm run prepare:web",
+    "preweb": "npm run prepare:web",
+    "prebuild:web": "npm run prepare:web"
   },
   "private": true,
   "expo": {

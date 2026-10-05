@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Image,
   Modal,
@@ -13,24 +13,43 @@ import { router, usePathname } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNights } from '../state/NightProvider';
 import { Icon, type IconName } from './Icon';
-import { Button, Pill, useCompact } from './Primitives';
+import { Button, useCompact } from './Primitives';
 import { colors, fonts, ui } from './theme';
+import { formatDuration } from '../domain';
+import {
+  MotionSettings,
+  RevealViewport,
+  useReducedMotion,
+  useScrollRevealViewport,
+} from './Motion';
 const tabs: { name: string; path: '/' | '/morning' | '/week'; icon: IconName }[] = [
   { name: 'Tonight', path: '/', icon: 'moon' },
   { name: 'Morning', path: '/morning', icon: 'sun' },
   { name: 'My week', path: '/week', icon: 'chart' },
 ];
 export function AppShell({ children }: { children: React.ReactNode }) {
+  return (
+    <MotionSettings>
+      <AppShellContent>{children}</AppShellContent>
+    </MotionSettings>
+  );
+}
+function AppShellContent({ children }: { children: React.ReactNode }) {
   const compact = useCompact();
   const insets = useSafeAreaInsets();
   const path = usePathname();
-  const scroll = useRef<ScrollView>(null);
-  useEffect(() => {
-    scroll.current?.scrollTo({ y: 0, animated: false });
-  }, [path]);
-  const { demo, notice, dismissNotice, switchDemo, removeAll, engine, notify } = useNights();
+  const viewportElement = useRef<View>(null);
+  const viewport = useScrollRevealViewport(viewportElement);
+  const reduced = useReducedMotion();
+  const { notice, dismissNotice, removeAll, engine, notify } = useNights();
   const [help, setHelp] = useState(false);
   const [clear, setClear] = useState(false);
+  const closeDialog = () => {
+    setHelp(false);
+    setClear(false);
+    dismissNotice();
+  };
+  const dialogTitle = notice?.title || (clear ? 'Delete all recordings?' : 'About WellM');
   const navigation = (
     <View style={[styles.tabs, compact && styles.mobileTabs]}>
       {tabs.map((tab) => {
@@ -65,8 +84,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     </View>
   );
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: insets.top }}>
-      <View style={[styles.header, compact && { height: 75, paddingHorizontal: 22 }]}>
+    <View
+      style={{
+        flex: 1,
+        minHeight: 0,
+        overflow: 'hidden',
+        backgroundColor: colors.background,
+        paddingTop: insets.top,
+      }}
+    >
+      <View style={[styles.header, compact && { height: 68, paddingHorizontal: 22 }]}>
         <View style={[styles.headerInner, compact && { maxWidth: undefined }]}>
           <Pressable
             accessibilityRole="button"
@@ -82,57 +109,60 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             />
           </Pressable>
           {!compact && navigation}
-          <View style={[ui.row, { gap: compact ? 9 : 22 }]}>
-            {!compact && (
-              <View style={[ui.row, { gap: 7 }]}>
-                <Icon name="shield" size={15} />
-                <Text style={styles.privateText}>Private on your phone</Text>
-              </View>
-            )}
+          <View style={ui.row}>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="About WellM and privacy"
               onPress={() => setHelp(true)}
-              style={styles.help}
+              style={({ pressed }) => [
+                styles.help,
+                pressed && { opacity: 0.65, transform: [{ scale: 0.96 }] },
+              ]}
             >
-              <Icon name="info" size={19} color={colors.muted} />
+              <Icon name="info" size={28} color={colors.muted} />
             </Pressable>
           </View>
         </View>
       </View>
-      {demo && (
-        <View style={styles.demoStrip}>
-          <View style={[ui.row, { gap: 7 }]}>
-            <Icon name="sparkles" size={13} color={colors.purple} />
-            <Text style={styles.demoText}>
-              Interactive preview · sample nights · microphone off
-            </Text>
-          </View>
-        </View>
+      {engine.active && path !== '/' && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={
+            engine.status === 'recording'
+              ? 'Recording in progress. Open tonight to stop recording.'
+              : 'Unsaved recording. Open tonight.'
+          }
+          onPress={() => router.navigate('/')}
+          style={({ pressed }) => [styles.recordingStrip, pressed && { opacity: 0.65 }]}
+        >
+          <Icon name="mic" size={15} />
+          <Text style={{ fontFamily: fonts.medium, fontSize: 12, color: colors.green, flex: 1 }}>
+            {engine.status === 'recording' ? 'Recording' : 'Unsaved recording'} ·{' '}
+            {formatDuration(engine.active.durationSeconds)}
+          </Text>
+          <Text style={{ fontFamily: fonts.medium, fontSize: 12, color: colors.green }}>Open</Text>
+          <Icon name="chevron" size={15} />
+        </Pressable>
       )}
-      <ScrollView
-        ref={scroll}
-        testID="screen-scroll"
-        style={{ flex: 1 }}
-        contentContainerStyle={{
-          paddingHorizontal: compact ? 22 : 44,
-          paddingTop: compact ? 30 : 43,
-          paddingBottom: compact ? 28 : 36,
-        }}
-      >
-        <View style={{ width: '100%', maxWidth: 1100, alignSelf: 'center' }}>
-          {children}
-          <View
-            style={[styles.footer, compact && { marginTop: 30, alignItems: 'flex-start', gap: 9 }]}
+      <RevealViewport.Provider value={viewport}>
+        <View ref={viewportElement} style={{ flex: 1, minHeight: 0 }} onLayout={viewport.refresh}>
+          <ScrollView
+            key={path}
+            testID="screen-scroll"
+            style={{ flex: 1, minHeight: 0 }}
+            onScroll={viewport.refresh}
+            scrollEventThrottle={100}
+            onContentSizeChange={viewport.refresh}
+            contentContainerStyle={{
+              paddingHorizontal: compact ? 22 : 44,
+              paddingTop: compact ? 24 : 32,
+              paddingBottom: compact ? 28 : 36,
+            }}
           >
-            <View style={[ui.row, { gap: 7 }]}>
-              <Icon name="shield" size={14} color={colors.muted} />
-              <Text style={ui.small}>Audio stays on your phone. Always.</Text>
-            </View>
-            <Text style={ui.small}>For personal awareness. Not a medical tool.</Text>
-          </View>
+            <View style={{ width: '100%', maxWidth: 1100, alignSelf: 'center' }}>{children}</View>
+          </ScrollView>
         </View>
-      </ScrollView>
+      </RevealViewport.Provider>
       {compact && (
         <View
           style={{
@@ -142,6 +172,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             paddingBottom: Math.max(10, insets.bottom),
             paddingTop: 8,
             paddingHorizontal: 14,
+            flexShrink: 0,
           }}
         >
           {navigation}
@@ -150,42 +181,59 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <Modal
         visible={help || !!notice || clear}
         transparent
-        animationType="fade"
-        onRequestClose={() => {
-          setHelp(false);
-          setClear(false);
-          dismissNotice();
-        }}
+        animationType={reduced ? 'none' : 'fade'}
+        onRequestClose={closeDialog}
       >
         <View style={styles.overlay}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Dismiss dialog"
+            onPress={closeDialog}
+            style={StyleSheet.absoluteFill}
+          />
           <View style={styles.modal}>
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <View style={[ui.row, { justifyContent: 'space-between', gap: 12 }]}>
+              <Text
+                style={[
+                  styles.modalTitle,
+                  { flex: 1 },
+                  compact && { fontSize: 26, lineHeight: 32 },
+                ]}
+              >
+                {dialogTitle}
+              </Text>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Close dialog"
-                onPress={() => {
-                  setHelp(false);
-                  setClear(false);
-                  dismissNotice();
+                onPress={closeDialog}
+                style={{
+                  padding: 10,
+                  minHeight: 44,
+                  minWidth: 44,
+                  flexShrink: 0,
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
-                style={{ alignSelf: 'flex-end', padding: 7 }}
               >
                 <Icon name="close" />
               </Pressable>
+            </View>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              style={{ flexShrink: 1, minHeight: 0 }}
+            >
               {notice ? (
                 <>
-                  <Text style={styles.modalTitle}>{notice.title}</Text>
                   <Text style={[ui.body, { marginVertical: 20 }]}>{notice.message}</Text>
-                  <Button title="Got it" icon="check" onPress={dismissNotice} />
+                  <Button title="Got it" icon="check" onPress={closeDialog} />
                 </>
               ) : clear ? (
                 <>
-                  <Text style={styles.modalTitle}>Clear your nights?</Text>
                   <Text style={[ui.body, { marginVertical: 20 }]}>
-                    This permanently deletes your saved summaries and audio clips from this phone.
+                    Summaries and audio clips will be permanently deleted.
                   </Text>
                   <Button
-                    title="Delete all nights"
+                    title="Delete all"
                     icon="trash"
                     onPress={() => {
                       void removeAll();
@@ -194,57 +242,31 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     }}
                   />
                   <View style={{ height: 10 }} />
-                  <Button
-                    secondary
-                    title="Keep my nights"
-                    icon="close"
-                    onPress={() => setClear(false)}
-                  />
+                  <Button secondary title="Cancel" icon="close" onPress={closeDialog} />
                 </>
               ) : (
                 <>
-                  <Pill text="PRIVATE BY DESIGN" icon="shield" />
-                  <Text style={[styles.modalTitle, { marginTop: 20 }]}>About your recordings</Text>
-                  <Text style={[ui.body, { marginTop: 16 }]}>
-                    WellM uses Google’s YAMNet sound model on your phone. It estimates snoring
-                    sounds, and saves only your summary and the loudest 10 seconds.
-                  </Text>
-                  <Text style={[ui.body, { marginTop: 14 }]}>
-                    A score of 18 means about 18% of analyzed audio was classified as snoring.
-                    Higher means more detected snoring, not better sleep. No diagnosis, sleep
-                    stages, or apnea detection.
-                  </Text>
-                  <Text style={[ui.body, { marginTop: 14 }]}>
-                    Nights need 30 minutes, at least 90% analysis coverage, no interruption, and no
-                    more than 30% noise to count. Speech, music, TV, or clipped audio can affect
-                    results.
-                  </Text>
-                  <Text style={[ui.small, { marginTop: 14, marginBottom: 22 }]}>
-                    No account. No uploads. Your latest 90 sessions are kept locally and excluded
-                    from phone backups. Stop a night before clearing history.
-                  </Text>
-                  <Button
-                    title={
-                      demo && Platform.OS !== 'web'
-                        ? 'Use real microphone'
-                        : demo
-                          ? 'Reset sample nights'
-                          : 'Explore sample nights'
+                  <AboutPoint text="YAMNet analyzes audio on this device. Nothing is uploaded. Only a summary and the loudest 10 seconds are saved; that clip may contain other sounds." />
+                  <AboutPoint text="The score is the percentage of analyzed audio detected as snoring. Higher means more snoring. It does not assess sleep quality or diagnose a condition." />
+                  <AboutPoint text="Weekly averages count nights with 30+ recorded minutes, at least 90% analysis, no interruption, and at most 30% noisy audio. The latest session each day is shown." />
+                  <AboutPoint
+                    text={
+                      Platform.OS === 'web'
+                        ? 'Keep this tab open and the screen awake while recording. The latest 90 sessions stay in this browser; clearing its storage removes them.'
+                        : 'The latest 90 sessions stay on this phone and are excluded from backups.'
                     }
-                    secondary
-                    icon="sparkles"
-                    onPress={() => {
-                      switchDemo();
-                      setHelp(false);
-                    }}
                   />
                   <Pressable
                     accessibilityRole="button"
                     onPress={() => {
-                      if (engine.status === 'recording') {
+                      if (
+                        engine.active ||
+                        engine.status === 'starting' ||
+                        engine.status === 'stopping'
+                      ) {
                         notify(
-                          'Finish your night first',
-                          'Stop listening before deleting your history.',
+                          'Finish recording first',
+                          'Stop and save your recording before clearing history.',
                         );
                       } else {
                         setClear(true);
@@ -252,7 +274,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     }}
                     style={{ padding: 15, alignItems: 'center' }}
                   >
-                    <Text style={[ui.small, { color: colors.orange }]}>Clear all saved nights</Text>
+                    <Text style={[ui.small, { color: colors.orange }]}>Delete all recordings</Text>
                   </Pressable>
                 </>
               )}
@@ -263,8 +285,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     </View>
   );
 }
+function AboutPoint({ text }: { text: string }) {
+  return (
+    <View style={[ui.row, { alignItems: 'flex-start', gap: 10, marginTop: 16 }]}>
+      <View
+        style={{
+          width: 4,
+          height: 4,
+          borderRadius: 2,
+          backgroundColor: colors.green,
+          marginTop: 8,
+        }}
+      />
+      <Text style={[ui.small, { flex: 1 }]}>{text}</Text>
+    </View>
+  );
+}
 const styles = StyleSheet.create({
-  header: { height: 98, borderBottomWidth: 1, borderColor: colors.border, paddingHorizontal: 44 },
+  header: {
+    height: 82,
+    flexShrink: 0,
+    borderBottomWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 44,
+  },
   headerInner: {
     width: '100%',
     maxWidth: 1100,
@@ -274,15 +318,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     height: '100%',
   },
-  privateText: { fontFamily: fonts.medium, fontSize: 11, color: colors.muted },
+  recordingStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 24,
+    minHeight: 44,
+    backgroundColor: colors.greenLight,
+    flexShrink: 0,
+  },
   help: {
     width: 44,
     height: 44,
-    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   tabs: { flexDirection: 'row', padding: 5, gap: 3, borderRadius: 15, backgroundColor: '#EDEFE8' },
   tab: {
@@ -297,17 +346,6 @@ const styles = StyleSheet.create({
   tabText: { fontFamily: fonts.medium, fontSize: 12, color: colors.muted },
   mobileTabs: { width: '100%', backgroundColor: 'transparent', justifyContent: 'space-around' },
   mobileTab: { flex: 1, flexDirection: 'column', gap: 4, paddingHorizontal: 5, paddingVertical: 9 },
-  demoStrip: { alignItems: 'center', backgroundColor: '#EFECF4', paddingVertical: 8 },
-  demoText: { fontFamily: fonts.medium, fontSize: 10, color: colors.purple },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-    borderTopWidth: 1,
-    borderColor: colors.border,
-    paddingTop: 21,
-    marginTop: 40,
-  },
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(25,30,25,.4)',

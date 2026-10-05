@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { useNights } from '../state/NightProvider';
 import { colors, fonts, ui } from './theme';
@@ -26,12 +26,10 @@ export function ClipPlayer({ night }: { night: NightSession }) {
         </View>
         <View style={{ flex: 1 }}>
           <Text style={{ fontFamily: fonts.medium, color: colors.ink, fontSize: 13 }}>
-            {night.source === 'demo' ? 'Hear it after your first real night' : 'No clip was saved'}
+            No clip was saved
           </Text>
           <Text style={[ui.small, { marginTop: 5 }]}>
-            {night.source === 'demo'
-              ? 'Sample nights have no recorded audio.'
-              : 'The session ended before audio could be saved.'}
+            The session ended before audio could be saved.
           </Text>
         </View>
       </View>
@@ -44,16 +42,21 @@ function LocalPlayer({ night }: { night: NightSession }) {
     { updateInterval: 150, keepAudioSessionActive: true },
   );
   const status = useAudioPlayerStatus(player);
-  const { engine, notify } = useNights();
+  const { engine, busy, notify } = useNights();
   const [preparing, setPreparing] = useState(false);
   const toggle = async () => {
-    if (engine.status === 'recording') {
+    if (engine.active || busy) {
       notify(
         'Your night is still listening',
         'Finish your night before playing a clip so playback doesn’t affect the recording.',
       );
       return;
     }
+    if (status.error) {
+      player.replace({ uri: night.loudestClipUri! });
+      return;
+    }
+    if (!status.isLoaded) return;
     if (status.playing) {
       player.pause();
       return;
@@ -74,9 +77,15 @@ function LocalPlayer({ night }: { night: NightSession }) {
     <View style={[ui.row, { padding: 17, borderRadius: 16, backgroundColor: '#F4F2F8', gap: 14 }]}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={status.playing ? 'Pause loudest audio clip' : 'Play loudest audio clip'}
-        accessibilityState={{ disabled: preparing }}
-        disabled={preparing}
+        accessibilityLabel={
+          status.error
+            ? 'Reload loudest audio clip'
+            : status.playing
+              ? 'Pause loudest audio clip'
+              : 'Play loudest audio clip'
+        }
+        accessibilityState={{ disabled: preparing || (!status.isLoaded && !status.error) }}
+        disabled={preparing || (!status.isLoaded && !status.error)}
         onPress={() => void toggle()}
         style={({ pressed }) => ({
           width: 47,
@@ -88,12 +97,26 @@ function LocalPlayer({ night }: { night: NightSession }) {
           opacity: pressed || preparing ? 0.65 : 1,
         })}
       >
-        <Icon name={status.playing ? 'pause' : 'play'} color="#fff" size={17} />
+        {!status.isLoaded && !status.error ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Icon
+            name={status.error ? 'volume' : status.playing ? 'pause' : 'play'}
+            color="#fff"
+            size={17}
+          />
+        )}
       </Pressable>
-      <Waveform
-        values={night.waveform}
-        progress={status.currentTime / Math.max(1, night.loudestClipSeconds)}
-      />
+      {status.error ? (
+        <Text accessibilityRole="alert" style={[ui.small, { flex: 1, color: colors.orange }]}>
+          This clip could not be loaded. Tap to retry.
+        </Text>
+      ) : (
+        <Waveform
+          values={night.waveform}
+          progress={status.currentTime / Math.max(1, night.loudestClipSeconds)}
+        />
+      )}
       <Text style={[ui.small, { color: colors.purple, fontVariant: ['tabular-nums'] }]}>
         {Math.floor(status.currentTime)} / {Math.round(night.loudestClipSeconds)}s
       </Text>

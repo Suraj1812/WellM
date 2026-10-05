@@ -1,6 +1,6 @@
 # Bundled YAMNet model
 
-The app ships Google's public YAMNet AudioSet classification model. It runs locally. No model download happens while using the app.
+The app ships Google's public YAMNet AudioSet classification model. It runs locally. Native builds contain the model without a runtime download. The browser loads this same bundled model and local LiteRT WASM files from the app origin at initialization; audio is never sent for inference.
 
 - Artifact: `yamnet.tflite`
 - Source: https://storage.googleapis.com/download.tensorflow.org/models/tflite/task_library/audio_classification/android/lite-model_yamnet_classification_tflite_1.tflite

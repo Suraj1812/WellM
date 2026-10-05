@@ -51,7 +51,19 @@ internal object SnoreEngine {
 
   fun nights(context: Context): List<Map<String, Any?>> {
     initialize(context)
-    return synchronized(lock) { saved.map { it.asBridgeMap() } }
+    return synchronized(lock) {
+      saved.map { night ->
+        val result = night.asBridgeMap().toMutableMap()
+        val clip = store!!.clipFile(night.getString("id"))
+        if (night.isNull("loudestClipUri") || !clip.isFile) {
+          result["loudestClipUri"] = null
+          result["loudestClipSeconds"] = 0.0
+        } else {
+          result["loudestClipUri"] = android.net.Uri.fromFile(clip).toString()
+        }
+        result
+      }
+    }
   }
 
   suspend fun start(context: Context): Map<String, Any?> {

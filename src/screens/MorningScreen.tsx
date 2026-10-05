@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useNights } from '../state/NightProvider';
@@ -8,59 +8,76 @@ import { Icon } from '../components/Icon';
 import { ClipPlayer } from '../components/ClipPlayer';
 import { colors, fonts, ui } from '../components/theme';
 import Reveal from '../components/Reveal';
-import { formatClock, formatDuration, formatMinutes, formatRelativeNightDate } from '../domain';
+import { useReducedMotion } from '../components/Motion';
+import { formatClock, formatDuration, formatRelativeNightDate } from '../domain';
 export default function Morning() {
   const compact = useCompact();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { nights, ready, remove, engine } = useNights();
   const [confirm, setConfirm] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyLimit, setHistoryLimit] = useState(8);
+  const [details, setDetails] = useState(false);
+  const reduced = useReducedMotion();
   const night = nights.find((item) => item.id === id) || nights[0];
   if (!night)
     return (
-      <View style={{ alignItems: 'center', paddingVertical: 70, gap: 19 }}>
-        <View style={styles.emptyIcon}>
-          <Icon name="sun" size={40} color={colors.purple} />
+      <Reveal variant="scale">
+        <View style={{ alignItems: 'center', paddingVertical: 70, gap: 19 }}>
+          <View style={styles.emptyIcon}>
+            <Icon name="sun" size={40} color={colors.purple} />
+          </View>
+          <Text style={[ui.title, { fontSize: compact ? 34 : 42, textAlign: 'center' }]}>
+            {ready ? 'No recordings yet' : 'Loading…'}
+          </Text>
+          <Text style={[ui.subtitle, { maxWidth: 390, textAlign: 'center' }]}>
+            {engine.status === 'recording'
+              ? 'Stop listening to see your summary.'
+              : 'Your first recording will appear here.'}
+          </Text>
+          <Button title="Start recording" icon="moon" onPress={() => router.navigate('/')} />
         </View>
-        <Text style={[ui.title, { fontSize: compact ? 34 : 42, textAlign: 'center' }]}>
-          {ready ? 'No summary yet.' : 'Getting your night ready…'}
-        </Text>
-        <Text style={[ui.subtitle, { maxWidth: 390, textAlign: 'center' }]}>
-          {engine.status === 'recording'
-            ? 'Your night is still listening. Finish it to see your morning card.'
-            : 'Start listening before bed. Your summary will be here when you finish.'}
-        </Text>
-        <Button title="Go to tonight" icon="moon" onPress={() => router.navigate('/')} />
-      </View>
+      </Reveal>
     );
   const noiseRatio = night.analyzedSeconds ? night.noisySeconds / night.analyzedSeconds : 0;
   const coverage = night.durationSeconds ? night.analyzedSeconds / night.durationSeconds : 0;
   return (
     <View>
-      <View
-        style={[
-          ui.row,
-          { justifyContent: 'space-between', marginBottom: 13, flexWrap: 'wrap', gap: 10 },
-        ]}
-      >
-        <Text style={ui.eyebrow}>YOUR MORNING CARD</Text>
-        <Pill
-          text={night.source === 'demo' ? 'SAMPLE NIGHT' : 'ONLY ON YOUR PHONE'}
-          icon={night.source === 'demo' ? 'sparkles' : 'shield'}
-          tint={night.source === 'demo' ? 'purple' : 'green'}
-        />
-      </View>
-      <Text style={[ui.title, compact && { fontSize: 39, lineHeight: 46 }]}>Good morning.</Text>
-      <Text style={[ui.subtitle, { marginTop: 10, marginBottom: 30 }]}>
+      <Text style={{ fontFamily: fonts.serif, color: colors.ink, fontSize: 34, lineHeight: 42 }}>
+        Morning
+      </Text>
+      <Text style={[ui.subtitle, { marginTop: 10, marginBottom: 16 }]}>
         {formatRelativeNightDate(night.endedAt)} · {formatClock(night.startedAt)} –{' '}
         {formatClock(night.endedAt)}
       </Text>
-      <Reveal>
-        <View style={{ flexDirection: compact ? 'column' : 'row', gap: 24 }}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Choose a saved recording"
+        onPress={() => setHistoryOpen(true)}
+        style={({ pressed }) => [
+          ui.row,
+          {
+            alignSelf: 'flex-start',
+            gap: 8,
+            marginBottom: 26,
+            paddingVertical: 8,
+            minHeight: 44,
+            opacity: pressed ? 0.6 : 1,
+          },
+        ]}
+      >
+        <Icon name="moon" size={16} />
+        <Text style={{ fontFamily: fonts.medium, color: colors.green, fontSize: 12 }}>
+          Recordings ({nights.length})
+        </Text>
+        <Icon name="chevron" size={14} />
+      </Pressable>
+      <View style={{ flexDirection: compact ? 'column' : 'row', gap: 24 }}>
+        <Reveal variant="scale" style={{ flex: compact ? undefined : 1 }}>
           <View
             style={[
               ui.card,
               {
-                flex: compact ? undefined : 1,
                 alignItems: 'center',
                 backgroundColor: '#EEF2E9',
                 borderColor: '#E1E8DA',
@@ -68,7 +85,7 @@ export default function Morning() {
             ]}
           >
             <View style={{ width: '100%' }}>
-              <SectionHeading title="Your snoring snapshot" />
+              <SectionHeading title="Snoring score" />
             </View>
             <View
               style={{
@@ -78,7 +95,11 @@ export default function Morning() {
                 justifyContent: 'center',
                 alignItems: 'center',
               }}
-              accessibilityLabel={`Snoring score ${night.score} out of 100. Higher means more detected snoring.`}
+              accessibilityLabel={
+                night.analyzedSeconds
+                  ? `Snoring score ${night.score} out of 100. Higher means more detected snoring.`
+                  : 'No score available because no audio was analyzed.'
+              }
             >
               <Svg width={218} height={218} style={{ position: 'absolute' }} viewBox="0 0 218 218">
                 <Circle cx="109" cy="109" r="92" fill="none" stroke="#DCE5D4" strokeWidth="12" />
@@ -102,25 +123,14 @@ export default function Morning() {
                   color: colors.green,
                 }}
               >
-                {night.score}
+                {night.analyzedSeconds ? night.score : '—'}
               </Text>
               <Text style={{ fontFamily: fonts.medium, fontSize: 12, color: '#6B7E64' }}>
                 OUT OF 100
               </Text>
             </View>
-            <Text
-              style={{ fontFamily: fonts.serif, fontSize: 26, color: colors.ink, marginTop: 5 }}
-            >
-              Estimated snoring time
-            </Text>
-            <Text
-              style={[
-                ui.small,
-                { textAlign: 'center', maxWidth: 300, marginTop: 10, marginBottom: 24 },
-              ]}
-            >
-              About {night.score}% of analyzed audio was classified as snoring. Higher means more
-              snoring sounds.
+            <Text style={[ui.small, { marginTop: 8, marginBottom: 24 }]}>
+              {night.analyzedSeconds ? 'Higher means more snoring.' : 'No audio analyzed.'}
             </Text>
             <View
               style={[
@@ -134,36 +144,27 @@ export default function Morning() {
                 },
               ]}
             >
-              <Metric
-                value={formatMinutes(night.snoringSeconds)}
-                unit="min"
-                label="estimated snoring"
-              />
+              <Metric value={formatDuration(night.snoringSeconds)} label="Snoring" />
               <View style={{ width: 1, height: 42, backgroundColor: '#DCE5D4' }} />
-              <Metric value={formatMinutes(night.durationSeconds)} unit="min" label="recorded" />
+              <Metric value={formatDuration(night.durationSeconds)} label="Recorded" />
             </View>
           </View>
-          <View style={{ flex: compact ? undefined : 1.12, gap: 20 }}>
+        </Reveal>
+        <View style={{ flex: compact ? undefined : 1.12, gap: 20 }}>
+          <Reveal delay={90}>
             <View style={ui.card}>
               <SectionHeading
-                title="Your loudest moment"
+                title="Loudest clip"
                 label={
                   night.loudestClipSeconds
                     ? `${Math.round(night.loudestClipSeconds)} seconds`
                     : 'Local playback'
                 }
               />
-              <Text style={[ui.small, { marginBottom: 20 }]}>
-                The loudest recorded sound, saved only on your phone.
-              </Text>
               <ClipPlayer night={night} />
-              <View style={[ui.row, { gap: 7, marginTop: 16 }]}>
-                <Icon name="info" size={13} color={colors.muted} />
-                <Text style={[ui.small, { flex: 1, fontSize: 11 }]}>
-                  The loudest sound may be snoring or something else.
-                </Text>
-              </View>
             </View>
+          </Reveal>
+          <Reveal delay={150}>
             <View style={ui.card}>
               <View
                 style={[
@@ -171,19 +172,14 @@ export default function Morning() {
                   { justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 10 },
                 ]}
               >
-                <Text style={styles.cardTitle}>Recording quality</Text>
+                <Text style={styles.cardTitle}>Quality</Text>
                 <Pill
-                  text={night.eligible ? 'Counted in your week' : 'Did not count'}
+                  text={night.eligible ? 'Counted' : 'Not counted'}
                   tint={night.eligible ? 'green' : 'orange'}
                   icon={night.eligible ? 'check' : 'info'}
                 />
               </View>
-              {night.eligible ? (
-                <Text style={[ui.small, { marginBottom: 20 }]}>
-                  Enough time, a clear signal, and continuous listening. This night is included in
-                  your weekly average.
-                </Text>
-              ) : (
+              {!night.eligible && (
                 <View style={{ marginBottom: 18 }}>
                   {night.exclusionReasons.map((reason) => (
                     <View
@@ -196,38 +192,39 @@ export default function Morning() {
                   ))}
                 </View>
               )}
-              <QualityRow label="Recording length" value={formatDuration(night.durationSeconds)} />
               <QualityRow
-                label="Background noise"
-                value={`${Math.round(noiseRatio * 100)}% of analyzed audio`}
+                label="Analyzed"
+                value={
+                  night.analyzedSeconds ? `${Math.min(100, Math.round(coverage * 100))}%` : '—'
+                }
               />
               <QualityRow
-                label="Audio analyzed"
-                value={`${Math.min(100, Math.round(coverage * 100))}% of recording`}
+                label="Noise"
+                value={night.analyzedSeconds ? `${Math.round(noiseRatio * 100)}%` : '—'}
                 last
               />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={details ? 'Hide recording details' : 'Show recording details'}
+                accessibilityState={{ expanded: details }}
+                onPress={() => setDetails((value) => !value)}
+                style={{ paddingVertical: 12, minHeight: 44 }}
+              >
+                <Text style={[ui.small, { color: colors.green }]}>
+                  {details ? 'Hide details' : 'Recording details'}
+                </Text>
+              </Pressable>
+              {details && (
+                <>
+                  <QualityRow label="Captured" value={formatDuration(night.durationSeconds)} />
+                  <QualityRow label="Analyzed" value={formatDuration(night.analyzedSeconds)} />
+                  <QualityRow label="Snoring" value={formatDuration(night.snoringSeconds)} />
+                  <QualityRow label="Noise" value={formatDuration(night.noisySeconds)} last />
+                </>
+              )}
             </View>
-          </View>
+          </Reveal>
         </View>
-      </Reveal>
-      <View
-        style={[
-          ui.row,
-          { flexWrap: 'wrap', justifyContent: 'space-between', gap: 16, marginTop: 24 },
-        ]}
-      >
-        <View style={{ flex: 1, minWidth: 210 }}>
-          <Text style={[ui.small, { maxWidth: 560 }]}>
-            Compare several nights to spot patterns. This score can’t tell you how well you slept or
-            diagnose a health condition.
-          </Text>
-        </View>
-        <Button
-          title="See my week"
-          secondary
-          icon="chart"
-          onPress={() => router.navigate('/week')}
-        />
       </View>
       <Pressable
         accessibilityRole="button"
@@ -235,22 +232,22 @@ export default function Morning() {
         onPress={() => setConfirm(true)}
         style={{ alignSelf: 'flex-start', paddingVertical: 17 }}
       >
-        <Text style={[ui.small, { color: colors.orange }]}>Delete this night</Text>
+        <Text style={[ui.small, { color: colors.orange }]}>Delete recording</Text>
       </Pressable>
       <Modal
         visible={confirm}
         transparent
-        animationType="fade"
+        animationType={reduced ? 'none' : 'fade'}
         onRequestClose={() => setConfirm(false)}
       >
         <View style={styles.overlay}>
           <View style={[ui.card, { maxWidth: 400, width: '100%' }]}>
-            <Text style={[ui.title, { fontSize: 30, lineHeight: 37 }]}>Delete this night?</Text>
+            <Text style={[ui.title, { fontSize: 30, lineHeight: 37 }]}>Delete recording?</Text>
             <Text style={[ui.body, { marginVertical: 20 }]}>
-              Your summary and audio clip will be permanently removed from this phone.
+              This removes the summary and audio clip.
             </Text>
             <Button
-              title="Delete night"
+              title="Delete recording"
               icon="trash"
               onPress={() => {
                 void remove(night.id);
@@ -258,25 +255,82 @@ export default function Morning() {
               }}
             />
             <View style={{ height: 10 }} />
-            <Button
-              title="Keep this night"
-              secondary
-              icon="close"
-              onPress={() => setConfirm(false)}
-            />
+            <Button title="Cancel" secondary icon="close" onPress={() => setConfirm(false)} />
+          </View>
+        </View>
+      </Modal>
+      <Modal
+        visible={historyOpen}
+        transparent
+        animationType={reduced ? 'none' : 'fade'}
+        onRequestClose={() => setHistoryOpen(false)}
+      >
+        <View style={styles.overlay}>
+          <View style={[ui.card, { maxWidth: 480, width: '100%', maxHeight: '85%' }]}>
+            <View style={[ui.row, { justifyContent: 'space-between', marginBottom: 8 }]}>
+              <Text style={[ui.title, { fontSize: 28, lineHeight: 36 }]}>Recordings</Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Close recordings"
+                onPress={() => setHistoryOpen(false)}
+                style={{ padding: 12, minWidth: 44, minHeight: 44 }}
+              >
+                <Icon name="close" size={18} />
+              </Pressable>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {nights.slice(0, historyLimit).map((item) => (
+                <Pressable
+                  key={item.id}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: item.id === night.id }}
+                  accessibilityLabel={`${formatRelativeNightDate(item.endedAt)} at ${formatClock(item.startedAt)}, ${formatDuration(item.durationSeconds)}, ${item.eligible ? 'counted' : 'did not count'}`}
+                  onPress={() => {
+                    setHistoryOpen(false);
+                    router.navigate({ pathname: '/morning', params: { id: item.id } });
+                  }}
+                  style={({ pressed }) => [
+                    styles.historyRow,
+                    item.id === night.id && { backgroundColor: colors.greenLight },
+                    pressed && { opacity: 0.65 },
+                  ]}
+                >
+                  <View style={{ flex: 1, gap: 5 }}>
+                    <Text style={{ fontFamily: fonts.medium, fontSize: 13, color: colors.ink }}>
+                      {formatRelativeNightDate(item.endedAt)} · {formatClock(item.startedAt)}
+                    </Text>
+                    <Text style={[ui.small, { fontSize: 11 }]}>
+                      {formatDuration(item.durationSeconds)} recorded ·{' '}
+                      {item.eligible ? 'Counted' : 'Quality note'}
+                    </Text>
+                  </View>
+                  <Text style={{ fontFamily: fonts.serif, fontSize: 26, color: colors.green }}>
+                    {item.analyzedSeconds ? item.score : '—'}
+                  </Text>
+                  <Icon name={item.id === night.id ? 'check' : 'chevron'} size={16} />
+                </Pressable>
+              ))}
+              {historyLimit < nights.length && (
+                <View style={{ marginTop: 16 }}>
+                  <Button
+                    title="Show more"
+                    secondary
+                    icon="chevron"
+                    onPress={() => setHistoryLimit((limit) => limit + 8)}
+                  />
+                </View>
+              )}
+            </ScrollView>
           </View>
         </View>
       </Modal>
     </View>
   );
 }
-function Metric({ value, unit, label }: { value: string; unit: string; label: string }) {
+function Metric({ value, label }: { value: string; label: string }) {
   return (
     <View style={{ alignItems: 'center' }}>
-      <Text style={{ fontFamily: fonts.serif, fontSize: 30, color: colors.green }}>
-        {value}
-        <Text style={{ fontFamily: fonts.regular, fontSize: 13 }}> {unit}</Text>
-      </Text>
+      <Text style={{ fontFamily: fonts.serif, fontSize: 30, color: colors.green }}>{value}</Text>
       <Text style={[ui.small, { marginTop: 3 }]}>{label}</Text>
     </View>
   );
@@ -327,6 +381,16 @@ const styles = StyleSheet.create({
     height: 90,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  historyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    borderRadius: 13,
+    borderBottomWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 4,
   },
   overlay: {
     flex: 1,

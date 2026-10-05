@@ -1,0 +1,64 @@
+name: Android preview APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      CI: '1'
+      NODE_ENV: production
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: npm ci --include=dev
+      - name: Verify model and source
+        run: |
+          npm run model:verify
+          npm run check
+      - name: Generate Android project
+        run: npx expo prebuild --platform android --clean --no-install
+      - name: Install matching Android toolchain
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            'platforms;android-36' 'build-tools;36.0.0' \
+            'ndk;27.1.12297006' 'cmake;3.22.1'
+      - name: Build embedded release APK and run native clip tests
+        working-directory: android
+        run: |
+          ./gradlew :wellm-snore:compileDebugKotlin :wellm-snore:testDebugUnitTest :app:assembleRelease \
+            --no-daemon --max-workers=2 -PreactNativeArchitectures=arm64-v8a
+      - name: Verify installable preview
+        run: |
+          mkdir -p artifacts/android-preview
+          cp android/app/build/outputs/apk/release/app-release.apk artifacts/android-preview/wellm-preview.apk
+          python3 scripts/verify-apk.py artifacts/android-preview/wellm-preview.apk "$ANDROID_HOME"
+          git rev-parse HEAD > artifacts/android-preview/source-revision.txt
+      - uses: actions/upload-artifact@v7
+        with:
+          name: wellm-android-preview
+          path: artifacts/android-preview/
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 30
+      - name: Save native test evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-native-test-results
+          path: modules/wellm-snore/android/build/test-results/testDebugUnitTest/
+          if-no-files-found: warn

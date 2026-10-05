@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  createDemoNights,
   formatDuration,
   formatMinutes,
   formatRelativeNightDate,
@@ -11,7 +10,30 @@ import {
   getWeekDays,
 } from '../src/domain/index';
 
+import type { NightSession } from '../src/domain/types';
+
 process.env.TZ = 'America/New_York';
+
+function fixtureNight(id: string, endedAt: number): NightSession {
+  return {
+    id,
+    endedAt,
+    startedAt: endedAt - 60_000,
+    durationSeconds: 60,
+    analyzedSeconds: 59.475,
+    snoringSeconds: 0,
+    noisySeconds: 0,
+    score: 0,
+    eligible: false,
+    exclusionReasons: ['Recorded less than 30 minutes.'],
+    loudestClipUri: null,
+    loudestClipSeconds: 0,
+    loudestDbfs: null,
+    interrupted: false,
+    waveform: [],
+    source: 'recorded',
+  };
+}
 
 test('an overnight session belongs to the morning date', () => {
   const morning = new Date(2026, 9, 4, 6, 30).getTime();
@@ -51,7 +73,10 @@ test('week rolls correctly across a year boundary', () => {
 
 test('multiple recordings on one day select the latest without changing stored order', () => {
   const now = new Date(2026, 9, 4, 12).getTime();
-  const fixtures = createDemoNights(now);
+  const fixtures = [
+    fixtureNight('first', now - 60_000),
+    fixtureNight('yesterday', now - 86_400_000),
+  ];
   const duplicate = { ...fixtures[0], id: 'newer', endedAt: fixtures[0].endedAt + 30_000 };
   const nights = [fixtures[0], duplicate, fixtures[1]];
   const originalOrder = nights.map((night) => night.id);
@@ -63,39 +88,10 @@ test('multiple recordings on one day select the latest without changing stored o
   );
 });
 
-test('demo has seven distinct nights, explicit sample source, and no invented playback', () => {
+test('an empty history never creates a recorded night for a calendar day', () => {
   const now = new Date(2026, 9, 4, 12).getTime();
-  const nights = createDemoNights(now);
-  assert.equal(nights.length, 7);
-  assert.equal(new Set(nights.map((night) => getLocalDateKey(night.endedAt))).size, 7);
-  assert.equal(nights[0].endedAt < now, true);
   assert.equal(
-    nights.every((night) => night.source === 'demo' && night.loudestClipUri === null),
-    true,
-  );
-  assert.equal(nights.filter((night) => !night.eligible).length, 2);
-  assert.equal(
-    nights.some((night) => night.exclusionReasons.some((reason) => reason.includes('30 minutes'))),
-    true,
-  );
-  assert.equal(
-    nights.some((night) =>
-      night.exclusionReasons.some((reason) => reason.includes('Background noise')),
-    ),
-    true,
-  );
-  assert.equal(
-    getWeekDays(now, now).every((day) => getNightForDay(nights, day.key)),
-    true,
-  );
-});
-
-test('a preview opened before dawn has no duplicate or future sample mornings', () => {
-  const now = new Date(2026, 9, 4, 2).getTime();
-  const nights = createDemoNights(now);
-  assert.equal(new Set(nights.map((night) => getLocalDateKey(night.endedAt))).size, 7);
-  assert.equal(
-    nights.every((night) => night.endedAt <= now),
+    getWeekDays(now, now).every((day) => getNightForDay([], day.key) === undefined),
     true,
   );
 });

@@ -6,3 +6,4 @@ dist
 package-lock.json
 assets/models
 artifacts
+public/wellm-audio

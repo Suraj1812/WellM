@@ -1,7 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 import type { EngineState, NightSession } from '../domain/types';
-import { calculateNightMetrics, createDemoNights } from '../domain';
 import { nativeEngine, requestMicrophone } from '../services/engine';
 
 const idle: EngineState = { status: 'idle', active: null, error: null };
@@ -9,7 +8,6 @@ type Notice = { title: string; message: string } | null;
 type Context = {
   nights: NightSession[];
   engine: EngineState;
-  demo: boolean;
   ready: boolean;
   busy: boolean;
   notice: Notice;
@@ -19,251 +17,203 @@ type Context = {
   stop(): Promise<NightSession | null>;
   remove(id: string): Promise<void>;
   removeAll(): Promise<void>;
-  switchDemo(): void;
 };
 const NightContext = createContext<Context | null>(null);
+
 export function NightProvider({ children }: { children: React.ReactNode }) {
-  const [demo, setDemo] = useState(Platform.OS === 'web');
-  const [nights, setNights] = useState<NightSession[]>(() =>
-    Platform.OS === 'web' ? createDemoNights() : [],
-  );
+  const [nights, setNights] = useState<NightSession[]>([]);
   const [engine, setEngine] = useState<EngineState>(idle);
-  const [ready, setReady] = useState(Platform.OS === 'web' || !nativeEngine);
+  const [ready, setReady] = useState(!nativeEngine);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
   const operation = useRef(false);
-  const modeVersion = useRef(0);
-  const demoStarted = useRef(0);
+  const revision = useRef(0);
   const engineRef = useRef(engine);
-  useEffect(() => {
-    engineRef.current = engine;
-  }, [engine]);
+  const mounted = useRef(true);
   const notify = useCallback((title: string, message: string) => setNotice({ title, message }), []);
+  const updateEngine = useCallback((state: EngineState) => {
+    engineRef.current = state;
+    if (mounted.current) setEngine(state);
+  }, []);
+
   const refresh = useCallback(async () => {
-    if (!nativeEngine || demo) return;
-    const version = modeVersion.current;
+    if (!nativeEngine || operation.current) return;
+    const version = revision.current;
     try {
       const [state, history] = await Promise.all([
         nativeEngine.getState(),
         nativeEngine.getNights(),
       ]);
-      if (version !== modeVersion.current) return;
-      setEngine(state);
-      setNights(history.sort((a, b) => b.endedAt - a.endedAt));
+      if (!mounted.current || version !== revision.current || operation.current) return;
+      updateEngine(state);
+      setNights(
+        history
+          .filter((night) => night.source === 'recorded')
+          .sort((a, b) => b.endedAt - a.endedAt),
+      );
     } catch (error) {
-      if (version !== modeVersion.current) return;
+      if (!mounted.current || version !== revision.current) return;
       notify(
         'Could not read your nights',
         error instanceof Error ? error.message : 'Try reopening WellM.',
       );
     } finally {
-      if (version === modeVersion.current) setReady(true);
+      if (mounted.current && version === revision.current) setReady(true);
     }
-  }, [demo, notify]);
+  }, [notify, updateEngine]);
+
   useEffect(() => {
+    mounted.current = true;
     void Promise.resolve().then(refresh);
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') void refresh();
     });
     let polling = false;
-    const timer = setInterval(async () => {
-      if (polling || operation.current) return;
-      if (demo) {
-        if (!demoStarted.current) return;
-        const seconds = (Date.now() - demoStarted.current) / 1000;
-        setEngine({
-          status: 'recording',
-          error: null,
-          active: {
-            id: 'preview-active',
-            startedAt: demoStarted.current,
-            durationSeconds: seconds,
-            analyzedSeconds: seconds,
-            snoringSeconds: seconds * 0.18,
-            noisySeconds: 0,
-            currentDbfs: -36,
-            lastSnoringConfidence: 0.62,
-            waveform: Array.from(
-              { length: 40 },
-              (_, i) => 0.12 + Math.abs(Math.sin(i * 1.7 + seconds)) * 0.6,
-            ),
-          },
-        });
-      } else if (nativeEngine) {
+    const timer = setInterval(
+      async () => {
+        if (!nativeEngine || polling || operation.current) return;
         polling = true;
-        const version = modeVersion.current;
+        const version = revision.current;
         try {
           const state = await nativeEngine.getState();
-          if (version !== modeVersion.current) return;
-          if (engineRef.current.status === 'recording' && state.status !== 'recording')
-            await refresh();
-          setEngine(state);
-        } catch {
+          if (!mounted.current || version !== revision.current || operation.current) return;
+          const finished = engineRef.current.active && !state.active;
+          const changed = state.status !== engineRef.current.status;
+          updateEngine(state);
+          if (finished || changed) await refresh();
+        } catch (error) {
+          if (!mounted.current || version !== revision.current || operation.current) return;
+          updateEngine({
+            ...engineRef.current,
+            error:
+              error instanceof Error
+                ? error.message
+                : 'Could not refresh the recording. Try reopening WellM.',
+          });
         } finally {
           polling = false;
         }
-      }
-    }, 1000);
+      },
+      Platform.OS === 'web' ? 300 : 750,
+    );
     return () => {
+      mounted.current = false;
       clearInterval(timer);
       sub.remove();
     };
-  }, [demo, refresh]);
-  const start = async () => {
-    if (operation.current || engine.active) return false;
+  }, [refresh, updateEngine]);
+
+  const beginOperation = () => {
+    if (operation.current) return false;
     operation.current = true;
+    revision.current += 1;
     setBusy(true);
+    return true;
+  };
+  const endOperation = () => {
+    operation.current = false;
+    if (mounted.current) setBusy(false);
+  };
+  const start = async () => {
+    if (engineRef.current.active || !beginOperation()) return false;
     try {
-      if (demo) {
-        demoStarted.current = Date.now();
-        setEngine({
-          status: 'recording',
-          error: null,
-          active: {
-            id: 'preview-active',
-            startedAt: Date.now(),
-            durationSeconds: 0,
-            analyzedSeconds: 0,
-            snoringSeconds: 0,
-            noisySeconds: 0,
-            currentDbfs: -60,
-            lastSnoringConfidence: 0,
-            waveform: [],
-          },
-        });
-        return true;
-      }
       if (!nativeEngine) {
         notify(
-          'A phone build is needed',
-          'Install the WellM development build to listen with YAMNet. Expo Go and the browser can only preview sample nights.',
+          'Install the phone app',
+          'This recorder needs the WellM native build. Install the APK to use your microphone.',
         );
         return false;
       }
+      updateEngine({ status: 'starting', active: null, error: null });
       if (!(await requestMicrophone())) {
+        updateEngine(idle);
         notify(
           'Microphone access is off',
-          'Allow microphone access in your phone settings to start a night. Your audio stays on this phone.',
+          'Allow microphone access in settings, then start again. Audio is processed on this device.',
         );
         return false;
       }
       const result = await nativeEngine.startNight();
-      setEngine(result);
+      updateEngine(result);
       if (result.error) throw new Error(result.error);
-      return true;
+      return result.status === 'recording';
     } catch (error) {
-      notify(
-        'Could not start listening',
-        error instanceof Error ? error.message : 'Please try again.',
-      );
+      const message = error instanceof Error ? error.message : 'Please try again.';
+      try {
+        if (nativeEngine) updateEngine(await nativeEngine.getState());
+        else updateEngine({ status: 'error', active: null, error: message });
+      } catch {
+        updateEngine({ status: 'error', active: null, error: message });
+      }
+      notify('Could not start listening', message);
       return false;
     } finally {
-      operation.current = false;
-      setBusy(false);
+      endOperation();
     }
   };
   const stop = async () => {
-    if (operation.current) return null;
-    operation.current = true;
-    setBusy(true);
+    if (!nativeEngine || !engineRef.current.active || !beginOperation()) return null;
     try {
-      let result: NightSession;
-      if (demo) {
-        const seconds = Math.max(1, (Date.now() - demoStarted.current) / 1000);
-        result = {
-          ...createDemoNights()[0],
-          id: `preview-${Date.now()}`,
-          startedAt: demoStarted.current,
-          endedAt: Date.now(),
-          durationSeconds: seconds,
-          analyzedSeconds: seconds,
-          snoringSeconds: seconds * 0.18,
-          noisySeconds: 0,
-          ...calculateNightMetrics({
-            durationSeconds: seconds,
-            analyzedSeconds: seconds,
-            snoringSeconds: seconds * 0.18,
-            noisySeconds: 0,
-            interrupted: false,
-          }),
-          loudestClipUri: null,
-          loudestClipSeconds: 0,
-          source: 'demo',
-        };
-        demoStarted.current = 0;
-      } else {
-        if (!nativeEngine) return null;
-        result = await nativeEngine.stopNight();
-      }
-      setNights((old) => [result, ...old.filter((night) => night.id !== result.id)]);
-      setEngine(idle);
+      updateEngine({ ...engineRef.current, status: 'stopping' });
+      const result = await nativeEngine.stopNight();
+      if (mounted.current)
+        setNights((old) => [result, ...old.filter((night) => night.id !== result.id)].slice(0, 90));
+      updateEngine(idle);
       return result;
     } catch (error) {
       notify(
         'Could not finish this night',
-        error instanceof Error ? error.message : 'Your session may still be listening. Try again.',
+        error instanceof Error ? error.message : 'Try saving your night again.',
       );
-      await refresh();
+      try {
+        updateEngine(await nativeEngine.getState());
+      } catch {
+        updateEngine({
+          ...engineRef.current,
+          status: 'error',
+          error: 'Your summary has not been saved. Try again.',
+        });
+      }
       return null;
     } finally {
-      operation.current = false;
-      setBusy(false);
+      endOperation();
     }
   };
   const remove = async (id: string) => {
-    if (operation.current) return;
-    operation.current = true;
-    setBusy(true);
+    if (!nativeEngine || !beginOperation()) return;
     try {
-      if (!demo) await nativeEngine?.deleteNight(id);
-      setNights((old) => old.filter((night) => night.id !== id));
+      await nativeEngine.deleteNight(id);
+      if (mounted.current) setNights((old) => old.filter((night) => night.id !== id));
     } catch (error) {
-      notify('Could not delete this night', String(error));
+      notify('Could not delete this night', error instanceof Error ? error.message : String(error));
     } finally {
-      operation.current = false;
-      setBusy(false);
+      endOperation();
     }
   };
   const removeAll = async () => {
-    if (operation.current || engine.active) {
+    if (engineRef.current.active || operation.current) {
       notify('Finish your night first', 'Finish the current action before deleting your history.');
       return;
     }
-    operation.current = true;
-    setBusy(true);
+    if (!nativeEngine || !beginOperation()) return;
     try {
-      if (!demo) await nativeEngine?.deleteAllNights();
-      setNights([]);
+      await nativeEngine.deleteAllNights();
+      if (mounted.current) setNights([]);
     } catch (error) {
-      notify('Could not clear your history', String(error));
+      notify(
+        'Could not clear your history',
+        error instanceof Error ? error.message : String(error),
+      );
     } finally {
-      operation.current = false;
-      setBusy(false);
+      endOperation();
     }
   };
-  const switchDemo = () => {
-    if (operation.current || engine.active) {
-      notify('Finish your night first', 'Finish the current action before switching modes.');
-      return;
-    }
-    modeVersion.current += 1;
-    setEngine(idle);
-    if (Platform.OS !== 'web' && demo) {
-      setDemo(false);
-      setNights([]);
-      setReady(!nativeEngine);
-    } else {
-      setDemo(true);
-      setNights(createDemoNights());
-      setReady(true);
-    }
-  };
+
   return (
     <NightContext.Provider
       value={{
         nights,
         engine,
-        demo,
         ready,
         busy,
         notice,
@@ -273,7 +223,6 @@ export function NightProvider({ children }: { children: React.ReactNode }) {
         stop,
         remove,
         removeAll,
-        switchDemo,
       }}
     >
       {children}

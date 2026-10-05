@@ -30,3 +30,5 @@ yarn-error.*
 /ios
 /android
 artifacts/
+
+/public/wellm-audio/

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useNights } from '../state/NightProvider';
-import { Button, Pill, SectionHeading, useCompact } from '../components/Primitives';
+import { Button, Pill, useCompact } from '../components/Primitives';
 import { Icon } from '../components/Icon';
+import { WeekChart } from '../components/WeekChart';
 import { colors, fonts, ui } from '../components/theme';
 import Reveal from '../components/Reveal';
 import {
@@ -13,9 +14,10 @@ import {
   formatDuration,
   formatMinutes,
 } from '../domain';
+
 export default function Week() {
   const compact = useCompact();
-  const { nights, demo } = useNights();
+  const { nights, ready } = useNights();
   const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const anchor = new Date();
@@ -26,267 +28,160 @@ export default function Week() {
   const average = eligible.length
     ? Math.round(eligible.reduce((sum, night) => sum + night!.score, 0) / eligible.length)
     : null;
-  const selectedIndex = selected ? days.findIndex((day) => day.key === selected) : 6;
-  const selectedNight = weekNights[Math.max(0, selectedIndex)];
-  const selectedDay = days[Math.max(0, selectedIndex)];
+  const selectedIndex = Math.max(0, selected ? days.findIndex((day) => day.key === selected) : 6);
+  const selectedNight = weekNights[selectedIndex];
+  const selectedDay = days[selectedIndex];
+  const animationKey = `${days[0].key}:${weekNights.map((night) => (night ? `${night.id}:${night.score}:${night.analyzedSeconds}` : '')).join('|')}`;
+
+  if (!ready)
+    return (
+      <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+        <ActivityIndicator color={colors.green} accessibilityLabel="Loading recordings" />
+      </View>
+    );
+
   return (
     <View>
-      <View
+      <Text
         style={[
-          ui.row,
-          { justifyContent: 'space-between', marginBottom: 13, flexWrap: 'wrap', gap: 10 },
+          ui.title,
+          { fontSize: compact ? 36 : 42, lineHeight: compact ? 44 : 52, marginBottom: 24 },
         ]}
       >
-        <Text style={ui.eyebrow}>YOUR WEEK</Text>
-        {demo && <Pill text="SAMPLE NIGHTS" icon="sparkles" tint="purple" />}
-      </View>
-      <Text style={[ui.title, compact && { fontSize: 39, lineHeight: 46 }]}>
-        The last seven nights.
+        My week
       </Text>
-      <Text style={[ui.subtitle, { marginTop: 10, marginBottom: 30 }]}>
-        Compare snoring estimates from your recorded nights.
-      </Text>
-      <Reveal>
-        <View style={[ui.card, { padding: compact ? 20 : 30 }]}>
-          <View style={[ui.row, { justifyContent: 'space-between', flexWrap: 'wrap', gap: 15 }]}>
-            <View>
-              <Text style={ui.eyebrow}>AVERAGE SNORING SCORE</Text>
-              <View style={[ui.row, { gap: 12, marginTop: 8 }]}>
-                <Text
-                  style={{
-                    fontFamily: fonts.serif,
-                    fontSize: 55,
-                    color: colors.green,
-                    lineHeight: 63,
-                  }}
-                >
-                  {average === null ? '—' : average}
-                </Text>
-                <Text style={[ui.small, { maxWidth: 190 }]}>
-                  {eligible.length
-                    ? `from ${eligible.length} counted ${eligible.length === 1 ? 'night' : 'nights'}\nHigher means more detected snoring.`
-                    : 'No counted nights yet.\nRecord for at least 30 minutes.'}
-                </Text>
-              </View>
-            </View>
-            <View style={[ui.row, { gap: 9 }]}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Previous seven days"
-                onPress={() => {
-                  setOffset((old) => old - 1);
-                  setSelected(null);
+      <View style={[ui.card, { padding: compact ? 18 : 28 }]}>
+        <View style={[ui.row, { justifyContent: 'space-between', flexWrap: 'wrap', gap: 14 }]}>
+          <View>
+            <Text style={ui.small}>Average snoring score</Text>
+            <View style={[ui.row, { gap: 12, marginTop: 5 }]}>
+              <Text
+                style={{
+                  fontFamily: fonts.serif,
+                  fontSize: 48,
+                  lineHeight: 56,
+                  color: colors.green,
                 }}
-                style={styles.arrow}
               >
-                <View style={{ transform: [{ rotate: '180deg' }] }}>
-                  <Icon name="chevron" size={16} />
-                </View>
-              </Pressable>
-              <Text style={[ui.small, { fontFamily: fonts.medium, color: colors.ink }]}>
-                {days[0].date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} –{' '}
-                {days[6].date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                {average ?? '—'}
               </Text>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Next seven days"
-                accessibilityState={{ disabled: offset === 0 }}
-                disabled={offset === 0}
-                onPress={() => {
-                  setOffset((old) => Math.min(0, old + 1));
-                  setSelected(null);
-                }}
-                style={[styles.arrow, offset === 0 && { opacity: 0.3 }]}
-              >
-                <Icon name="chevron" size={16} />
-              </Pressable>
+              <Text style={ui.small}>
+                {eligible.length
+                  ? `${eligible.length} counted ${eligible.length === 1 ? 'night' : 'nights'}`
+                  : 'No counted nights'}
+              </Text>
             </View>
           </View>
-          <View style={{ marginTop: 32, flexDirection: 'row', height: 210 }}>
-            <View
-              style={{ width: 30, height: 170, justifyContent: 'space-between', paddingBottom: 0 }}
+          <View style={[ui.row, { gap: 9 }]}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Previous seven days"
+              onPress={() => {
+                setOffset((old) => old - 1);
+                setSelected(null);
+              }}
+              style={({ pressed }) => [styles.arrow, pressed && styles.pressed]}
             >
-              {[100, 75, 50, 25, 0].map((tick) => (
-                <Text key={tick} style={[ui.small, { fontSize: 10, lineHeight: 11 }]}>
-                  {tick}
-                </Text>
-              ))}
-            </View>
-            <View style={{ flex: 1 }}>
-              <View
-                style={{
-                  position: 'absolute',
-                  pointerEvents: 'none',
-                  left: 0,
-                  right: 0,
-                  top: 3,
-                  height: 165,
-                  justifyContent: 'space-between',
-                }}
-              >
-                {[0, 1, 2, 3, 4].map((row) => (
-                  <View
-                    key={row}
-                    style={{ borderTopWidth: 1, borderColor: '#E9EDE3', borderStyle: 'dashed' }}
-                  />
-                ))}
+              <View style={{ transform: [{ rotate: '180deg' }] }}>
+                <Icon name="chevron" size={16} />
               </View>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  height: 210,
-                  gap: compact ? 8 : 30,
-                  paddingHorizontal: compact ? 5 : 28,
-                }}
-              >
-                {days.map((day, index) => {
-                  const night = weekNights[index];
-                  const active = index === Math.max(0, selectedIndex);
-                  return (
-                    <Pressable
-                      key={day.key}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: active }}
-                      accessibilityLabel={`${day.label}, ${night ? (night.eligible ? `score ${night.score}` : `did not count: ${night.exclusionReasons.join(' ')}`) : 'no night recorded'}`}
-                      onPress={() => setSelected(day.key)}
-                      style={{
-                        flex: 1,
-                        alignItems: 'center',
-                        justifyContent: 'flex-end',
-                        paddingBottom: 4,
-                      }}
-                    >
-                      <View
-                        style={{
-                          height: 170,
-                          width: '100%',
-                          maxWidth: 66,
-                          justifyContent: 'flex-end',
-                          alignItems: 'center',
-                        }}
-                      >
-                        {night && night.eligible && (
-                          <Text
-                            style={{
-                              fontFamily: fonts.medium,
-                              color: active ? colors.green : colors.muted,
-                              fontSize: 12,
-                              marginBottom: 7,
-                            }}
-                          >
-                            {night.score}
-                          </Text>
-                        )}
-                        <View
-                          style={{
-                            width: '85%',
-                            height: night
-                              ? night.eligible
-                                ? Math.max(9, night.score * 1.48)
-                                : 33
-                              : 5,
-                            backgroundColor: night
-                              ? night.eligible
-                                ? active
-                                  ? colors.green
-                                  : '#ACC0A5'
-                                : '#F4EBDC'
-                              : '#E8ECE2',
-                            borderColor: night && !night.eligible ? '#D5B992' : 'transparent',
-                            borderWidth: night && !night.eligible ? 1 : 0,
-                            borderStyle: 'dashed',
-                            borderTopLeftRadius: 8,
-                            borderTopRightRadius: 8,
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          {night && !night.eligible && (
-                            <Icon name="info" size={14} color={colors.orange} />
-                          )}
-                        </View>
-                      </View>
-                      <Text
-                        style={{
-                          fontFamily: active ? fonts.bold : fonts.regular,
-                          color: active ? colors.green : colors.muted,
-                          fontSize: 11,
-                          marginTop: 12,
-                        }}
-                      >
-                        {compact ? day.shortLabel : day.label}
-                      </Text>
-                      {day.isToday && (
-                        <View
-                          style={{
-                            height: 3,
-                            width: 3,
-                            borderRadius: 2,
-                            backgroundColor: colors.green,
-                            marginTop: 5,
-                          }}
-                        />
-                      )}
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-          </View>
-          <View style={[ui.row, { gap: 21, marginTop: 20, flexWrap: 'wrap' }]}>
-            <Legend color="#ACC0A5" text="Counted night" />
-            <Legend color="#F4EBDC" text="Did not count" dashed />
-            <Legend color="#E8ECE2" text="No recording" />
+            </Pressable>
+            <Text style={[ui.small, { fontFamily: fonts.medium, color: colors.ink }]}>
+              {days[0].date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} –{' '}
+              {days[6].date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Next seven days"
+              accessibilityState={{ disabled: offset === 0 }}
+              disabled={offset === 0}
+              onPress={() => {
+                setOffset((old) => Math.min(0, old + 1));
+                setSelected(null);
+              }}
+              style={({ pressed }) => [
+                styles.arrow,
+                offset === 0 && { opacity: 0.3 },
+                pressed && styles.pressed,
+              ]}
+            >
+              <Icon name="chevron" size={16} />
+            </Pressable>
           </View>
         </View>
-      </Reveal>
-      <View style={{ flexDirection: compact ? 'column' : 'row', gap: 22, marginTop: 24 }}>
-        <View style={[ui.card, { flex: compact ? undefined : 1.25 }]}>
-          <SectionHeading
-            title={formatNightDate(selectedDay.date.getTime())}
-            label={selectedDay.isToday ? 'Today' : undefined}
-          />
+        <WeekChart
+          days={days}
+          nights={weekNights}
+          selectedIndex={selectedIndex}
+          onSelect={setSelected}
+          animationKey={animationKey}
+        />
+      </View>
+      <Reveal
+        key={`${selectedDay.key}:${selectedNight?.id || ''}`}
+        variant="fade"
+        style={{ marginTop: 18 }}
+      >
+        <View style={[ui.card, { padding: compact ? 20 : 26 }]}>
+          <View style={[ui.row, { justifyContent: 'space-between', gap: 12, marginBottom: 14 }]}>
+            <Text style={{ fontFamily: fonts.bold, fontSize: 16, color: colors.ink }}>
+              {formatNightDate(selectedDay.date.getTime())}
+            </Text>
+            {selectedNight && (
+              <Pill
+                text={selectedNight.eligible ? 'Counted' : 'Not counted'}
+                tint={selectedNight.eligible ? 'green' : 'orange'}
+              />
+            )}
+          </View>
           {selectedNight ? (
             <>
-              <View style={[ui.row, { justifyContent: 'space-between', marginBottom: 16 }]}>
+              <View style={[ui.row, { gap: 18, marginBottom: 10 }]}>
                 <Text style={{ fontFamily: fonts.serif, fontSize: 32, color: colors.green }}>
-                  {selectedNight.score}
-                  <Text style={[ui.small, { fontSize: 12 }]}> / 100</Text>
+                  {selectedNight.analyzedSeconds ? selectedNight.score : '—'}
+                  <Text style={ui.small}> / 100</Text>
                 </Text>
-                <Pill
-                  text={selectedNight.eligible ? 'Counted' : 'Did not count'}
-                  tint={selectedNight.eligible ? 'green' : 'orange'}
-                  icon={selectedNight.eligible ? 'check' : 'info'}
-                />
+                <Text style={ui.small}>
+                  {formatMinutes(selectedNight.snoringSeconds)} min snoring ·{' '}
+                  {formatDuration(selectedNight.durationSeconds)} recorded
+                </Text>
               </View>
-              <Text style={ui.small}>
-                {formatMinutes(selectedNight.snoringSeconds)} min estimated snoring ·{' '}
-                {formatDuration(selectedNight.durationSeconds)} recorded
-              </Text>
-              {selectedNight.exclusionReasons.map((reason) => (
-                <Text key={reason} style={[ui.small, { color: colors.orange, marginTop: 8 }]}>
-                  {reason}
+              {!selectedNight.eligible && (
+                <Text
+                  accessibilityLabel={selectedNight.exclusionReasons.join(' ')}
+                  style={[ui.small, { color: colors.orange }]}
+                >
+                  {selectedNight.exclusionReasons[0]}
                 </Text>
-              ))}
+              )}
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={`View morning card for ${selectedDay.label}`}
+                accessibilityLabel={`Open recording for ${selectedDay.label}`}
                 onPress={() =>
                   router.navigate({ pathname: '/morning', params: { id: selectedNight.id } })
                 }
-                style={[ui.row, { gap: 8, marginTop: 22 }]}
+                style={({ pressed }) => [
+                  ui.row,
+                  {
+                    gap: 8,
+                    marginTop: 12,
+                    minHeight: 44,
+                    alignSelf: 'flex-start',
+                    opacity: pressed ? 0.6 : 1,
+                  },
+                ]}
               >
                 <Text style={{ fontFamily: fonts.bold, color: colors.green, fontSize: 13 }}>
-                  Open morning card
+                  View recording
                 </Text>
-                <Icon name="arrow" size={17} />
+                <Icon name="arrow" size={16} />
               </Pressable>
             </>
           ) : (
-            <View>
-              <Text style={[ui.subtitle, { marginBottom: 20 }]}>No recording for this day.</Text>
+            <View style={[ui.row, { justifyContent: 'space-between', flexWrap: 'wrap', gap: 15 }]}>
+              <Text style={ui.small}>No recording</Text>
               <Button
-                title="Go to tonight"
+                title="Record tonight"
                 secondary
                 icon="moon"
                 onPress={() => router.navigate('/')}
@@ -294,64 +189,11 @@ export default function Week() {
             </View>
           )}
         </View>
-        <View
-          style={{
-            flex: compact ? undefined : 1,
-            borderRadius: 22,
-            backgroundColor: '#ECE8F2',
-            padding: 26,
-          }}
-        >
-          <Icon name="leaf" color={colors.purple} size={25} />
-          <Text
-            style={{
-              fontFamily: fonts.serif,
-              color: '#534963',
-              fontSize: 25,
-              marginTop: 13,
-              marginBottom: 10,
-            }}
-          >
-            Which nights count?
-          </Text>
-          <Text style={[ui.small, { color: '#7D7288', lineHeight: 21 }]}>
-            Only clear, uninterrupted nights of 30 minutes or more count toward your average. A
-            short or noisy night is still saved, so you always know what happened.
-          </Text>
-          <Text style={[ui.small, { marginTop: 12, color: '#7D7288' }]}>
-            Tap any day to see the details. Your most recent session for each morning is shown.
-          </Text>
-        </View>
-      </View>
+      </Reveal>
     </View>
   );
 }
-function Legend({
-  color,
-  text,
-  dashed = false,
-}: {
-  color: string;
-  text: string;
-  dashed?: boolean;
-}) {
-  return (
-    <View style={[ui.row, { gap: 7 }]}>
-      <View
-        style={{
-          width: 10,
-          height: 10,
-          borderRadius: 3,
-          backgroundColor: color,
-          borderWidth: dashed ? 1 : 0,
-          borderStyle: 'dashed',
-          borderColor: '#D5B992',
-        }}
-      />
-      <Text style={[ui.small, { fontSize: 10 }]}>{text}</Text>
-    </View>
-  );
-}
+
 const styles = StyleSheet.create({
   arrow: {
     width: 44,
@@ -361,4 +203,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  pressed: { backgroundColor: '#DCE8D6', transform: [{ scale: 0.95 }] },
 });

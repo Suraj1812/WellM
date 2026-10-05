@@ -1,9 +1,9 @@
 # Interface motion
 
-The browser preview uses the AOS 2.3.4 stylesheet from jsDelivr for restrained fade-up reveals. Each section moves 18 pixels over 500 milliseconds and animates once. The primary recording controls remain outside the reveal wrappers.
+Scroll sections reveal with a short fade, upward movement, or scale transition, with staggered timing. The browser uses local IntersectionObserver-driven styles rather than downloading an animation stylesheet. Native sections use Animated with native transforms and viewport measurements from the screen scroll container.
 
-`src/components/Reveal.web.tsx` uses IntersectionObserver to trigger the AOS classes. This handles React Native Web’s nested scroll container without a separate window-scroll listener or an added runtime package. The stylesheet is requested once per browser page. If it fails to load, content stays visible.
+Route changes reset the scroll position. Week score bars grow upward from the baseline on entry, with staggered days and grid lines appearing from bottom to top. Buttons provide press feedback, the microphone indicator responds to measured captured signal energy. Live waveform bars use captured values only; an empty signal shows a neutral baseline.
 
-Reduced-motion preferences disable the effect. Keyboard focus reveals a section immediately, and observers are disconnected after the first reveal and on unmount. The phone version resolves `Reveal.tsx`, which preserves the layout without loading web CSS or making network requests.
+Reduced-motion preferences disable movement and show content immediately. Keyboard focus reveals a browser section immediately. Observers, scroll subscriptions, and running animations are cleaned up on unmount. Animation does not drive capture timers, recording data, or model results.
 
-The browser implementation was checked for initial visibility, reveal after scrolling, route navigation, and reduced-motion behavior. Recording, inference, and native background work are independent of interface motion.
+Recording, inference, and background work remain independent of interface motion. Real-device background acceptance is recorded separately in `verification.md`.

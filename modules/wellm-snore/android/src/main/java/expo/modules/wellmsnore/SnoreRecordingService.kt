@@ -28,6 +28,7 @@ class SnoreRecordingService : Service() {
     private const val CHANNEL = "wellm-night-recording"
     private const val NOTIFICATION_ID = 4172
     private const val ACTION_STOP = "expo.modules.wellmsnore.STOP"
+    private const val IDLE_READ_DELAY_MS = 20L
     @Volatile var isRunning = false
       private set
   }
@@ -163,12 +164,14 @@ class SnoreRecordingService : Service() {
       while (!SnoreEngine.stopRequested && !destroyed) {
         interruption?.let { throw IOException(it) }
         if (SystemClock.elapsedRealtime() - started >= SnoreEngine.MAX_SESSION_MS) break
-        val size = recorder.read(block, 0, block.size, AudioRecord.READ_BLOCKING)
+        // Keep cancellation and the capture watchdog reachable even if input stalls.
+        val size = recorder.read(block, 0, block.size, AudioRecord.READ_NON_BLOCKING)
         if (size < 0) throw IOException("Microphone recording stopped (code $size). This night did not count.")
         if (size == 0) {
           if (SystemClock.elapsedRealtime() - lastCapture > 3000) {
             throw IOException("The microphone stopped delivering audio. This night did not count.")
           }
+          Thread.sleep(IDLE_READ_DELAY_MS)
           continue
         }
         lastCapture = SystemClock.elapsedRealtime()

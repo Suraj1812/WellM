@@ -4,6 +4,8 @@ Keep build-time checks and physical-device evidence separate. Update this file w
 
 ## Automated checks
 
+The native build and CI results below describe the published 4 October preview. The current working-tree browser changes are recorded separately below; the Android source fixes require a rebuilt native artifact.
+
 | Check                              | Status                          | Evidence                                                                                                                          |
 | ---------------------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | Pure domain tests                  | Passed                          | `npm test`: 18 tests covering score, quality, calendar behavior, and sample data                                                  |
@@ -68,3 +70,17 @@ With a normally configured Android SDK and JDK 17, the generated `./gradlew` can
 | Two-minute screen recording link              | Pending                         |
 
 Current limitation: host inference, native source compilation, and core algorithm tests do not establish phone microphone behavior, locked-screen continuity, background permission behavior, native playback, or actual snore accuracy. These require a successful full build installed on a real phone and the acceptance protocol in `device-testing.md`.
+
+## 5 October 2026 browser and UI verification
+
+The browser now uses real microphone PCM and the bundled YAMNet model through local LiteRT WASM. Production sample nights and synthesized recording data were removed. History starts empty and persists real summaries and WAV blobs in IndexedDB.
+
+- `npm run check`: TypeScript, Expo lint, 29 domain/audio/permission/runtime regression tests, and formatting passed.
+- `npm run build:web` and `npm run model:verify`: passed. Browser model checksum matches the native bundled model.
+- Real microphone in the Codex browser: a short session displayed about 34 recorded seconds, 98% analysis coverage, score 0, and a ten-second saved clip. This was ambient microphone testing, not a validated snoring clip or physical-phone acceptance run.
+- An isolated Chromium test captured a generated microphone audio fixture through the actual AudioWorklet/resampling/YAMNet pipeline. Initial capture was 14.128 seconds, with 13.65 analyzed seconds. Its ten-second WAV contained captured nonzero PCM. This test does not provide phone or real-snoring evidence.
+- The isolated final browser run passed 23 checks, including chart growth anchored to the baseline and immediate rendering with reduced motion. It checked playback, reload persistence, repeated start/stop, reuse of already-loaded WASM, interruption and checkpoint recovery, denied permission, deletion, local Week dates, 320/390-pixel layouts, reduced motion, popup alignment, and inside/outside-click behavior. No JavaScript errors, console errors, or outgoing HTTP writes were observed in the isolated final run.
+- Known startup/runtime issues fixed: ignored microphone permission now times out cleanly; late grants release their tracks; Fast Refresh preserves the engine and reuses loaded/pending LiteRT; stop disconnects queued worklet callbacks; stale provider reads cannot overwrite newer actions; playback cannot interfere with capture startup.
+- Android source now uses cancellable nonblocking microphone reads and verifies retained clip paths. These source changes have not been compiled into the existing published APK or validated on a phone.
+
+The physical-phone two-minute video and thirty-minute locked-screen run remain pending. Browser capture deliberately stops and marks an interruption when hidden; it does not claim native overnight continuity.

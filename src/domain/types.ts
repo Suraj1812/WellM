@@ -14,7 +14,7 @@ export interface NightSession {
   loudestDbfs: number | null;
   interrupted: boolean;
   waveform: number[];
-  source: 'recorded' | 'demo';
+  source: 'recorded';
 }
 
 export interface ActiveNight {

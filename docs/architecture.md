@@ -2,13 +2,13 @@
 
 ## Product flow
 
-1. **Tonight:** **Start listening** requests microphone permission and starts native capture. The recording view shows elapsed capture time, a live sound indication, and **Stop & see summary**.
+1. **Tonight:** **Start listening** requests microphone permission and starts local capture. The recording view shows elapsed capture time, a live sound indication, and **Stop & see summary**.
 2. **Morning:** stopping yields a locally stored summary with score, detected snoring versus recorded time, quality reasons, and playback of the loudest ten seconds when available.
 3. **My week:** one bar per morning shows the latest recording ending on that local date. A missing recording differs from a recorded night that did not count. Selecting a day shows its details, and **Open morning card** opens its full card.
 
-Sample mode is identified in the interface. Fixture records use `source: 'demo'`, have no audio file URI, and never enter native history. A browser cannot establish that phone recording or background inference works.
+All production sessions use `source: 'recorded'`. The app starts with empty local history and does not generate sample recordings or playback. Browser capture cannot establish that phone recording or background inference works.
 
-The interface exposes the most recent session for each morning. Earlier sessions ending on the same date remain in native storage but have no separate history list in this version; deleting the latest reveals the previous one for that day.
+The interface exposes the most recent session for each morning. Earlier sessions ending on the same date remain in local storage and can be selected in Morning history; deleting the latest also reveals the previous one in the week.
 
 ## Native boundary
 
@@ -17,6 +17,12 @@ The UI calls the local `WellMSnore` Expo module through `src/services/engine.ts`
 Audio capture and inference live outside React renders and JavaScript timers. This matters because the operating system can suspend the JavaScript interface while the phone is locked. The UI polls native state while visible and refreshes after returning to the foreground. Native capture remains responsible for its own lifecycle.
 
 Android uses a microphone foreground service and an ongoing recording notification. iOS uses an audio recording session with the audio background mode. Both paths need physical-device checks for permissions, interruptions, and lock-screen behavior. Starting while the app is foregrounded is part of the intended flow; arbitrary background starts and automatic restarts after a force-stop are not assumed.
+
+## Browser engine
+
+Expo resolves `src/services/engine.web.ts` for web. It implements the same typed session API using microphone permission, AudioWorklet capture, streaming mono resampling to 16 kHz, and LiteRT CPU WASM inference with the same audited YAMNet TFLite model and label indices. The build preparation script copies model and runtime files from local dependencies into `public/wellm-audio`; no inference service receives audio.
+
+Browser summaries and selected WAV blobs are retained in IndexedDB, with object URLs recreated for playback after reload. Active checkpoints recover interrupted sessions. Visibility changes or lost audio end a browser session as interrupted, rather than implying overnight continuity. Clearing site storage removes browser history. Browser persistence and storage quotas are controlled by the browser and are separate from native backup settings.
 
 ## Inference and scoring
 
@@ -48,7 +54,7 @@ A bounded ring holds the current ten seconds of PCM; a second bounded buffer hol
 
 Night metadata and the selected WAV clip stay in app-local storage, excluded from operating-system backups. Android uses its no-backup files directory and disables backup in the generated manifest; iOS excludes the directory and files from backup and applies file protection compatible with recording after the first device unlock. Up to 90 sessions are retained, with older metadata and clips pruned. The engine checkpoints active summaries so that an interrupted recording can be recovered as excluded history instead of being silently presented as a completed night. Deletion should remove the corresponding clip as well as the summary. Device testing must verify the precise lifecycle, including restart, retention, backup configuration, and deletion.
 
-No runtime model download, remote inference, analytics service, account, or server is needed for a night. A development build can contact its local Metro server for code; that is different from audio processing, and airplane-mode privacy testing should use an installed build with an embedded JavaScript bundle.
+Native recording needs no runtime model download, remote inference, analytics service, account, or server. The browser fetches its bundled model and WASM from the same origin during initialization; captured audio stays in the browser. A development build can contact its local Metro server for code; that is different from audio processing, and airplane-mode privacy testing should use an installed build with an embedded JavaScript bundle.
 
 ## Limits to explain in an interview
 

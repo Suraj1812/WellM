@@ -3,5 +3,5 @@ const expoConfig = require('eslint-config-expo/flat');
 
 module.exports = defineConfig([
   expoConfig,
-  { ignores: ['dist/**', 'android/**', 'ios/**', 'artifacts/**'] },
+  { ignores: ['dist/**', 'android/**', 'ios/**', 'artifacts/**', 'public/wellm-audio/**'] },
 ]);

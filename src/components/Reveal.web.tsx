@@ -1,72 +1,55 @@
 import React, { useEffect, useRef } from 'react';
+import { View } from 'react-native';
+import type { RevealProps } from './Reveal';
 
-let stylesheet: Promise<boolean> | undefined;
-
-function loadStylesheet() {
-  if (stylesheet) return stylesheet;
-  stylesheet = new Promise<boolean>((resolve) => {
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css';
-    link.onload = () => resolve(true);
-    link.onerror = () => resolve(false);
-    const overrides = document.createElement('style');
-    overrides.textContent = `[data-aos="fade-up"] { transform: translate3d(0, 18px, 0); }
-      [data-aos="fade-up"].aos-animate { transform: none; }
-      @media (prefers-reduced-motion: reduce) {
-        [data-aos] { opacity: 1 !important; transform: none !important; transition: none !important; }
-      }`;
-    document.head.append(link, overrides);
-  });
-  return stylesheet;
-}
-
-export default function Reveal({ children }: { children: React.ReactNode }) {
+export default function Reveal({ children, delay = 0, variant = 'up', style }: RevealProps) {
   const element = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const target = element.current;
     if (!target || !('IntersectionObserver' in window)) return;
     const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    let cancelled = false;
     let observer: IntersectionObserver | undefined;
     let frame = 0;
     const show = () => {
-      target.classList.add('aos-animate');
+      target.style.opacity = '1';
+      target.style.transform = 'none';
+      target.dataset.revealed = 'true';
       observer?.disconnect();
     };
     const onMotionChange = () => {
-      if (motion.matches) show();
+      if (motion.matches) {
+        target.style.transition = 'none';
+        show();
+      }
     };
+    target.dataset.reveal = variant;
     target.addEventListener('focusin', show);
     motion.addEventListener('change', onMotionChange);
     if (!motion.matches) {
-      void loadStylesheet().then((loaded) => {
-        if (!loaded || cancelled || motion.matches) return;
-        target.dataset.aos = 'fade-up';
-        target.dataset.aosDuration = '500';
-        target.dataset.aosEasing = 'ease-out-cubic';
-        target.dataset.aosOnce = 'true';
-        target.classList.add('aos-init');
-        observer = new IntersectionObserver(
-          ([entry]) => {
-            if (entry.isIntersecting) frame = requestAnimationFrame(show);
-          },
-          { threshold: 0.08 },
-        );
-        observer.observe(target);
-      });
-    }
+      target.style.opacity = '0';
+      target.style.transform =
+        variant === 'scale' ? 'scale(.96)' : variant === 'up' ? 'translateY(22px)' : 'none';
+      target.style.transition = `opacity 520ms cubic-bezier(.22,1,.36,1) ${delay}ms, transform 520ms cubic-bezier(.22,1,.36,1) ${delay}ms`;
+      observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) frame = requestAnimationFrame(show);
+        },
+        { threshold: 0.05 },
+      );
+      observer.observe(target);
+    } else show();
     return () => {
-      cancelled = true;
       observer?.disconnect();
       cancelAnimationFrame(frame);
       motion.removeEventListener('change', onMotionChange);
       target.removeEventListener('focusin', show);
     };
-  }, []);
+  }, [delay, variant]);
   return (
-    <div ref={element} style={{ width: '100%' }}>
-      {children}
-    </div>
+    <View style={style}>
+      <div ref={element} style={{ width: '100%' }}>
+        {children}
+      </div>
+    </View>
   );
 }
